@@ -4,12 +4,12 @@ import Header from '../Header';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/';
+  const hideHeader = ['/', '/login', '/signup'].includes(location.pathname);
 
   return (
     <div className="min-h-screen">
-      {!isLoginPage && <Header />}
-      <main className={!isLoginPage ? "pt-16" : ""}>
+      {!hideHeader && <Header />}
+      <main className={!hideHeader ? "pt-16" : ""}>
         {children}
       </main>
     </div>
