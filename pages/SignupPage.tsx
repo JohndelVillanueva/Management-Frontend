@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   EnvelopeIcon,
@@ -10,8 +10,12 @@ import {
   UserGroupIcon,
   BuildingLibraryIcon,
   AcademicCapIcon,
-  AtSymbolIcon
+  AtSymbolIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+  const baseUrl = import.meta.env.VITE_API_URL;
+
+// (Removed custom ImportMeta and ImportMetaEnv interfaces - Vite provides these types globally)
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -21,23 +25,78 @@ export default function SignupPage() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    department: ""
+    department: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [userType, setUserType] = useState<"ADMIN" | "STAFF" | "HEAD" | null>(null);
+  const [userType, setUserType] = useState<"ADMIN" | "STAFF" | "HEAD" | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Add missing state for departments
+  const [departments, setDepartments] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(false);
+  const [departmentError, setDepartmentError] = useState("");
+
+  // Fetch departments with AbortController
+  useEffect(() => {
+  const abortController = new AbortController();
+
+  const fetchDepartments = async () => {
+    setIsDepartmentsLoading(true);
+    setDepartmentError("");
+
+    try {
+      const response = await fetch(`${baseUrl}/api/departments`, {
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to load departments");
+      }
+
+      setDepartments(data.data || []);
+    } catch (err) {
+      if (!abortController.signal.aborted) {
+        setDepartmentError(
+          err instanceof Error ? err.message : "Failed to load departments"
+        );
+        setDepartments([]);
+      }
+    } finally {
+      if (!abortController.signal.aborted) {
+        setIsDepartmentsLoading(false);
+      }
+    }
+  };
+
+  fetchDepartments();
+  return () => abortController.abort();
+}, []);
+
+
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-    setError(""); // Clear error on change
+    setError("");
   };
 
   const validateForm = () => {
@@ -47,6 +106,10 @@ export default function SignupPage() {
     }
     if (!formData.username) {
       setError("Username is required");
+      return false;
+    }
+    if (!formData.department) {
+      setError("Please select a department");
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -62,16 +125,16 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/signup', {
-        method: 'POST',
+      const response = await fetch(`${baseUrl}/auth/signup`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           username: formData.username,
@@ -85,28 +148,24 @@ export default function SignupPage() {
         }),
       });
 
-      // First check if the response is OK
       if (!response.ok) {
-        // Try to parse the error response as JSON
         let errorData;
         try {
           errorData = await response.json();
         } catch (jsonError) {
-          // If JSON parsing fails, use the status text
-          throw new Error(response.statusText || 'Registration failed');
+          throw new Error(response.statusText || "Registration failed");
         }
-        throw new Error(errorData.error || 'Registration failed');
+        throw new Error(errorData.error || "Registration failed");
       }
 
-      // If successful, parse the response
       const data = await response.json();
       setIsSuccess(true);
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-      console.error('Registration error:', err);
+      setError(err instanceof Error ? err.message : "Registration failed");
+      console.error("Registration error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -129,27 +188,35 @@ export default function SignupPage() {
               Administrative Portal Registration
             </p>
           </div>
-          
+
           <div className="space-y-4 text-orange-100 relative z-10 w-full">
             <div className="flex items-start bg-white/10 p-4 rounded-lg backdrop-blur-sm">
               <AcademicCapIcon className="h-6 w-6 mt-1 mr-3 flex-shrink-0 text-orange-200" />
               <div>
                 <h3 className="font-semibold text-base">Role-Based Access</h3>
-                <p className="text-xs text-orange-200">Different permissions for different roles</p>
+                <p className="text-xs text-orange-200">
+                  Different permissions for different roles
+                </p>
               </div>
             </div>
             <div className="flex items-start bg-white/10 p-4 rounded-lg backdrop-blur-sm">
               <AcademicCapIcon className="h-6 w-6 mt-1 mr-3 flex-shrink-0 text-orange-200" />
               <div>
                 <h3 className="font-semibold text-base">Secure Registration</h3>
-                <p className="text-xs text-orange-200">Accounts require verification</p>
+                <p className="text-xs text-orange-200">
+                  Accounts require verification
+                </p>
               </div>
             </div>
             <div className="flex items-start bg-white/10 p-4 rounded-lg backdrop-blur-sm">
               <AcademicCapIcon className="h-6 w-6 mt-1 mr-3 flex-shrink-0 text-orange-200" />
               <div>
-                <h3 className="font-semibold text-base">Department Integration</h3>
-                <p className="text-xs text-orange-200">Connect with department resources</p>
+                <h3 className="font-semibold text-base">
+                  Department Integration
+                </h3>
+                <p className="text-xs text-orange-200">
+                  Connect with department resources
+                </p>
               </div>
             </div>
           </div>
@@ -164,7 +231,9 @@ export default function SignupPage() {
             <h2 className="text-2xl font-bold text-gray-800 mb-1">
               Create Account
             </h2>
-            <p className="text-sm text-gray-600">Register for administrative access</p>
+            <p className="text-sm text-gray-600">
+              Register for administrative access
+            </p>
           </div>
 
           {error && (
@@ -196,7 +265,10 @@ export default function SignupPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* First Name Field */}
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   First Name
                 </label>
                 <div className="relative rounded-lg shadow-sm">
@@ -219,7 +291,10 @@ export default function SignupPage() {
 
               {/* Last Name Field */}
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Last Name
                 </label>
                 <div className="relative rounded-lg shadow-sm">
@@ -243,7 +318,10 @@ export default function SignupPage() {
 
             {/* Username Field */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Username
               </label>
               <div className="relative rounded-lg shadow-sm">
@@ -309,7 +387,10 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 School Email
               </label>
               <div className="relative rounded-lg shadow-sm">
@@ -330,31 +411,60 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Department Dropdown - Corrected */}
             <div>
-              <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="department"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Department
               </label>
               <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
                 </div>
-                <input
-                  id="department"
-                  name="department"
-                  type="text"
-                  autoComplete="off"
-                  required
-                  value={formData.department}
-                  onChange={handleChange}
-                  className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="Information Technology"
-                />
+                {isDepartmentsLoading ? (
+                  <div className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-100 animate-pulse">
+                    Loading departments...
+                  </div>
+                ) : departmentError ? (
+                  <div className="block w-full pl-9 pr-3 py-2 text-sm border border-red-300 rounded-lg bg-red-50 text-red-600">
+                    {departmentError}
+                  </div>
+                ) : (
+                  <select
+                    id="department"
+                    name="department"
+                    required
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="block w-full pl-9 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none bg-white"
+                  >
+                    <option value="" disabled>
+                      Select a department
+                    </option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                </div>
               </div>
+              {departmentError && (
+                <p className="mt-1 text-sm text-red-600">{departmentError}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Password
                 </label>
                 <div className="relative rounded-lg shadow-sm">
@@ -385,7 +495,10 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Confirm Password
                 </label>
                 <div className="relative rounded-lg shadow-sm">
