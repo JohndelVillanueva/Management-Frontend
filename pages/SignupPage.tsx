@@ -158,7 +158,7 @@ export default function SignupPage() {
         throw new Error(errorData.error || "Registration failed");
       }
 
-      const data = await response.json();
+      await response.json();
       setIsSuccess(true);
       setTimeout(() => {
         navigate("/login");
