@@ -13,7 +13,7 @@ import {
   AtSymbolIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-  const baseUrl = import.meta.env.VITE_API_URL;
+const baseUrl = import.meta.env.VITE_API_URL;
 
 // (Removed custom ImportMeta and ImportMetaEnv interfaces - Vite provides these types globally)
 
@@ -46,47 +46,45 @@ export default function SignupPage() {
 
   // Fetch departments with AbortController
   useEffect(() => {
-  const abortController = new AbortController();
+    const abortController = new AbortController();
 
-  const fetchDepartments = async () => {
-    setIsDepartmentsLoading(true);
-    setDepartmentError("");
+    const fetchDepartments = async () => {
+      setIsDepartmentsLoading(true);
+      setDepartmentError("");
 
-    try {
-      const response = await fetch(`${baseUrl}/api/departments`, {
-        signal: abortController.signal,
-      });
+      try {
+        const response = await fetch(`${baseUrl}/departments`, {
+          signal: abortController.signal,
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.message || "Failed to load departments");
+        }
+
+        setDepartments(data.data || []);
+      } catch (err) {
+        if (!abortController.signal.aborted) {
+          setDepartmentError(
+            err instanceof Error ? err.message : "Failed to load departments"
+          );
+          setDepartments([]);
+        }
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsDepartmentsLoading(false);
+        }
       }
+    };
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || "Failed to load departments");
-      }
-
-      setDepartments(data.data || []);
-    } catch (err) {
-      if (!abortController.signal.aborted) {
-        setDepartmentError(
-          err instanceof Error ? err.message : "Failed to load departments"
-        );
-        setDepartments([]);
-      }
-    } finally {
-      if (!abortController.signal.aborted) {
-        setIsDepartmentsLoading(false);
-      }
-    }
-  };
-
-  fetchDepartments();
-  return () => abortController.abort();
-}, []);
-
-
+    fetchDepartments();
+    return () => abortController.abort();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

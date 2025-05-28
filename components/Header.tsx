@@ -13,6 +13,7 @@ import {
   FaUserEdit,
 } from "react-icons/fa";
 import InfoSideBar from "./InfoSideBar"; // Adjust the import path as needed
+import { useAuth } from "../context/AuthContext"; // Adjust the import path as needed
 
 type MenuItem = {
   icon: React.ReactNode;
@@ -21,6 +22,8 @@ type MenuItem = {
   className?: string;
   onClick?: () => void; // Added onClick to MenuItem type
 };
+
+type UserType = 'ADMIN' | 'HEAD' | 'STAFF';
 
 const DEFAULT_PROFILE_IMAGE =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptMCAyYzQuNDE4IDAgOCAzLjU4MiA4IDhzLTMuNTgyIDgtOCA4LTgtMy41ODItOC04IDMuNTgyLTggOC04eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==";
@@ -34,6 +37,25 @@ const Header = () => {
   const infoSidebarRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const HeaderStyle = "Pampanga State University";
+  const { user, logout } = useAuth();
+
+    const getDashboardPath = (user_type?: string): string => {
+  switch (user_type?.toUpperCase()) { // Convert to uppercase for case insensitivity
+    case "ADMIN":
+      return "/AdminDashboard";
+    case "HEAD":
+      return "/HeadDashboard";
+    case "STAFF":
+      return "/StaffDashboard";
+    default:
+      return "/dashboard"; // Fallback for undefined or invalid types
+  }
+};
+
+  //   const handleLogout = useCallback(() => {
+  //   logout();
+  //   navigate("/");
+  // }, [logout, navigate]);
 
   const toggleInfoSidebar = useCallback(() => {
     setIsInfoSidebarOpen((prev) => !prev);
@@ -99,13 +121,14 @@ const Header = () => {
     };
   }, [closeAllDropdowns]);
 
-  const mainMenuItems = useMemo<MenuItem[]>(
-    () => [
+const mainMenuItems = useMemo<MenuItem[]>(() => {
+    if (!user) return [];
+    
+    return [
       {
         icon: <FaTachometerAlt />,
         label: "Dashboard",
-        path: "./admin/WelcomePage",
-        onClick: () => navigate("/adminDashboard"),
+        path: getDashboardPath(user.user_type),
       },
       {
         icon: <FaCog />,
@@ -119,9 +142,8 @@ const Header = () => {
         path: "/admin/AdminDashboard",
         onClick: () => navigate("/admin/AdminDashboard"),
       },
-    ],
-    [navigate]
-  );
+    ];
+  }, [navigate, user]);
   
 
   const profileMenuItems = useMemo<MenuItem[]>(
