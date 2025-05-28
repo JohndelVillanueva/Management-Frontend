@@ -7,6 +7,11 @@ import {
   AcademicCapIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from '../context/AuthContext';
+import { 
+  generateToken, 
+  verifyPassword,
+  generateVerificationToken 
+} from '../../backend/src/utils/auth';
 // Constants for storage keys
 const AUTH_TOKEN_KEY = "authToken";
 const USER_TYPE_KEY = "userType";
