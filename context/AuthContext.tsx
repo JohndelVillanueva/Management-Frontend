@@ -9,6 +9,7 @@ type User = {
   username: string;
   email: string;
   user_type: 'ADMIN' | 'HEAD' | 'STAFF';
+  is_verified?: boolean;
 };
 
 type AuthContextType = {

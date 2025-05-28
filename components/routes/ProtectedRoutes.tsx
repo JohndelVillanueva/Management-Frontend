@@ -8,15 +8,15 @@ type Props = {
   allowedRoles?: ('ADMIN' | 'HEAD' | 'STAFF')[];
 };
 
-const ProtectedRoute: React.FC<Props> = ({ children, allowedRoles }) => {
-  const { user, isAuthenticated } = useAuth();
+const ProtectedRoute = ({ children, requireVerification = true }) => {
+  const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user!.user_type)) {
-    return <Navigate to="/login" replace />;
+  if (requireVerification && !user?.is_verified) {
+    return <Navigate to="/verify-email" />;
   }
 
   return children;
