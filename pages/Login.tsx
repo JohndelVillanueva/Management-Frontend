@@ -29,36 +29,29 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError("");
 
-    try {
-      const response = await fetch(`${baseUrl}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          rememberMe: formData.rememberMe,
-        }),
-        credentials: "include",
-      });
+  try {
+    const response = await fetch(`${baseUrl}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      }),
+      credentials: "include",
+    });
 
-      const data = await response.json();
-      console.log("Full response:", { status: response.status, data }); // Add this
+    const data = await response.json();
+    console.log("Full response:", { status: response.status, data });
 
-      if (!response.ok) {
-        console.log("Login failed - response details:", {
-          status: response.status,
-          statusText: response.statusText,
-          data: data,
-        });
-        throw new Error(data.message || "Login failed");
-      }
+    if (!response.ok) {
       if (data.code === "USER_NOT_VERIFIED") {
         console.log("Verification required - full response data:", data);
         throw new Error(
@@ -66,16 +59,40 @@ export default function LoginPage() {
         );
       }
       throw new Error(data.message || "Login failed");
-      // ... rest of your code ...
-    } catch (err) {
-      console.error("Login error:", err);
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred"
-      );
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    // Add these lines for successful login handling
+    if (data.token && data.user) {
+      // Call your auth context's login function
+      login(data.token, data.user, formData.rememberMe);
+      
+      // Redirect based on user type
+      switch (data.user.user_type) {
+        case "ADMIN":
+          navigate("/admindashboard");
+          break;
+        case "HEAD":
+          navigate("/headdashboard");
+          break;
+        case "STAFF":
+          navigate("/staffdashboard");
+          break;
+        default:
+          navigate("/dashboard");
+      }
+    } else {
+      throw new Error("Invalid response format - missing token or user data");
+    }
+
+  } catch (err) {
+    console.error("Login error:", err);
+    setError(
+      err instanceof Error ? err.message : "An unexpected error occurred"
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 relative">
