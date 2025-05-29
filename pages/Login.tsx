@@ -6,15 +6,7 @@ import {
   BuildingLibraryIcon,
   AcademicCapIcon,
 } from "@heroicons/react/24/outline";
-import { useAuth } from '../context/AuthContext';
-// import { 
-//   generateToken, 
-//   verifyPassword,
-//   generateVerificationToken 
-// } from '../../backend/src/utils/auth';
-// // Constants for storage keys
-// const AUTH_TOKEN_KEY = "authToken";
-// const USER_TYPE_KEY = "userType";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -22,7 +14,7 @@ export default function LoginPage() {
     password: "",
     rememberMe: false,
   });
-    const { login } = useAuth(); // Get the login function from context
+  const { login } = useAuth(); // Get the login function from context
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -57,34 +49,24 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
+      console.log("Full response:", { status: response.status, data }); // Add this
 
       if (!response.ok) {
+        console.log("Login failed - response details:", {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+        });
         throw new Error(data.message || "Login failed");
       }
-
-      // Store minimal user data if needed for UI
-      if (!data.token || !data.user) {
-        throw new Error("Invalid response format - missing token or user data");
+      if (data.code === "USER_NOT_VERIFIED") {
+        console.log("Verification required - full response data:", data);
+        throw new Error(
+          "Account not verified. A new verification email has been sent to your email address."
+        );
       }
-
-      login(data.token, data.user, formData.rememberMe);
-
-      // Redirect based on user type
-      setTimeout(() => {
-        switch (data.user.user_type) {
-          case "ADMIN":
-            navigate("/AdminDashboard", { replace: true });
-            break;
-          case "HEAD":
-            navigate("/headdashboard", { replace: true });
-            break;
-          case "STAFF":
-            navigate("/staffdashboard", { replace: true });
-            break;
-          default:
-            navigate("/dashboard", { replace: true });
-        }
-      }, 1500);
+      throw new Error(data.message || "Login failed");
+      // ... rest of your code ...
     } catch (err) {
       console.error("Login error:", err);
       setError(
@@ -194,11 +176,47 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Replace this existing error div with the new version */}
           {error && (
             <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
               {error}
+              {error.includes("verification email") && (
+                <div className="mt-2">
+                  <p className="text-sm mb-2">
+                    We've sent a new verification link to:
+                  </p>
+                  <p className="font-mono bg-red-100 px-2 py-1 rounded text-sm mb-2">
+                    {formData.email}
+                  </p>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() =>
+                        navigate("/verify-email", {
+                          state: { email: formData.email },
+                        })
+                      }
+                      className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                    >
+                      Enter Verification Code
+                    </button>
+                    <a
+                      href={`mailto:${formData.email}`}
+                      className="px-3 py-1 text-sm bg-white text-orange-600 border border-orange-300 rounded hover:bg-orange-50 transition-colors flex items-center"
+                    >
+                      <EnvelopeIcon className="h-4 w-4 mr-1" />
+                      Open Email
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
+          {/* {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )} */}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>

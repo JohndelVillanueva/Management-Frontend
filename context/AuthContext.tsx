@@ -17,6 +17,8 @@ type AuthContextType = {
   token: string | null;
   login: (token: string, userData: User, rememberMe: boolean) => void;
   logout: () => void;
+  verifyEmail: (verificationToken: string, rememberMe: boolean) => Promise<boolean>;
+  resendVerification: (userId: string) => Promise<void>;
   isAuthenticated: boolean;
 };
 
@@ -27,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if auth data exists in storage
+    // Initialize from storage
     const storedToken = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
     const storedUser = localStorage.getItem(USER_DATA_KEY) || sessionStorage.getItem(USER_DATA_KEY);
     
@@ -44,59 +46,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (rememberMe) {
       localStorage.setItem(AUTH_TOKEN_KEY, newToken);
       localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
-      // Clear session storage
       sessionStorage.removeItem(AUTH_TOKEN_KEY);
       sessionStorage.removeItem(USER_DATA_KEY);
     } else {
       sessionStorage.setItem(AUTH_TOKEN_KEY, newToken);
       sessionStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
-      // Clear local storage
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem(USER_DATA_KEY);
     }
   };
 
-// In your AuthContext.tsx
-const verifyEmail = async (verificationToken: string, rememberMe: boolean) => {
-  try {
-    const response = await fetch('/api/auth/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: verificationToken }),
-    });
+  const verifyEmail = async (verificationToken: string, rememberMe: boolean) => {
+    try {
+      const response = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: verificationToken }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Verification failed');
+      if (!response.ok) {
+        throw new Error(data.error || 'Verification failed');
+      }
+
+      // Update state and storage
+      setUser(data.user);
+      setToken(data.token);
+      
+      if (rememberMe) {
+        localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        localStorage.setItem(USER_DATA_KEY, JSON.stringify(data.user));
+      } else {
+        sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
+        sessionStorage.setItem(USER_DATA_KEY, JSON.stringify(data.user));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Verification error:', error);
+      throw error;
     }
+  };
 
-    // Update auth state with verified user
-    setUser(data.user);
-    setToken(data.token);
-    
-    // Store in appropriate storage
-    if (rememberMe) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-    } else {
-      sessionStorage.setItem('token', data.token);
-      sessionStorage.setItem('user', JSON.stringify(data.user));
+  const resendVerification = async (userId: string) => {
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend verification');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      throw error;
     }
+  };
 
-    return true;
-  } catch (error) {
-    console.error('Verification error:', error);
-    throw error;
-  }
-};
-
-// Add to your context value
-// This function will be used to verify the user's email after they click the verification link
   const logout = () => {
     setToken(null);
     setUser(null);
-    // Clear all storage
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(USER_DATA_KEY);
     sessionStorage.removeItem(AUTH_TOKEN_KEY);
@@ -109,6 +125,7 @@ const verifyEmail = async (verificationToken: string, rememberMe: boolean) => {
     login,
     logout,
     verifyEmail,
+    resendVerification,
     isAuthenticated: !!user && !!token,
   };
 
