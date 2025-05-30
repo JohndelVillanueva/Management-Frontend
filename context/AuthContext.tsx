@@ -10,6 +10,7 @@ type User = {
   email: string;
   user_type: 'ADMIN' | 'HEAD' | 'STAFF';
   is_verified?: boolean;
+  role?: 'ADMIN' | 'HEAD' | 'STAFF';
 };
 
 type AuthContextType = {
@@ -17,7 +18,7 @@ type AuthContextType = {
   token: string | null;
   login: (token: string, userData: User, rememberMe: boolean) => void;
   logout: () => void;
-  verifyEmail: (verificationToken: string, rememberMe: boolean) => Promise<boolean>;
+  // verifyEmail: (verificationToken: string, rememberMe: boolean) => Promise<boolean>;
   resendVerification: (userId: string) => Promise<void>;
   isAuthenticated: boolean;
 };
@@ -56,42 +57,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyEmail = async (verificationToken: string, rememberMe: boolean) => {
-    try {
-      const response = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: verificationToken }),
-      });
+  // const verifyEmail = async (verificationToken: string, rememberMe: boolean) => {
+  //   try {
+  //     const response = await fetch('/auth/verify', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ token: verificationToken }),
+  //     });
 
-      const data = await response.json();
+  //     const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Verification failed');
-      }
+  //     if (!response.ok) {
+  //       throw new Error(data.error || 'Verification failed');
+  //     }
 
-      // Update state and storage
-      setUser(data.user);
-      setToken(data.token);
+  //     // Update state and storage
+  //     setUser(data.user);
+  //     setToken(data.token);
       
-      if (rememberMe) {
-        localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-        localStorage.setItem(USER_DATA_KEY, JSON.stringify(data.user));
-      } else {
-        sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
-        sessionStorage.setItem(USER_DATA_KEY, JSON.stringify(data.user));
-      }
+  //     if (rememberMe) {
+  //       localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+  //       localStorage.setItem(USER_DATA_KEY, JSON.stringify(data.user));
+  //     } else {
+  //       sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
+  //       sessionStorage.setItem(USER_DATA_KEY, JSON.stringify(data.user));
+  //     }
 
-      return true;
-    } catch (error) {
-      console.error('Verification error:', error);
-      throw error;
-    }
-  };
+  //     return true;
+  //   } catch (error) {
+  //     console.error('Verification error:', error);
+  //     throw error;
+  //   }
+  // };
 
   const resendVerification = async (userId: string) => {
     try {
-      const response = await fetch('/api/auth/resend-verification', {
+      const response = await fetch('/auth/resend-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -124,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     token,
     login,
     logout,
-    verifyEmail,
+    // verifyEmail,
     resendVerification,
     isAuthenticated: !!user && !!token,
   };

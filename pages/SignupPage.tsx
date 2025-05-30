@@ -13,11 +13,11 @@ import {
   AtSymbolIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-const baseUrl = import.meta.env.VITE_API_URL;
 
 // (Removed custom ImportMeta and ImportMetaEnv interfaces - Vite provides these types globally)
 
 export default function SignupPage() {
+  const baseUrl = import.meta.env.VITE_API_URL;
   const [formData, setFormData] = useState({
     username: "",
     email: "",

@@ -23,7 +23,7 @@ type MenuItem = {
   onClick?: () => void; // Added onClick to MenuItem type
 };
 
-type UserType = 'ADMIN' | 'HEAD' | 'STAFF';
+// type UserType = 'ADMIN' | 'HEAD' | 'STAFF';
 
 const DEFAULT_PROFILE_IMAGE =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptMCAyYzQuNDE4IDAgOCAzLjU4MiA4IDhzLTMuNTgyIDgtOCA4LTgtMy41ODItOC04IDMuNTgyLTggOC04eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==";
@@ -39,23 +39,26 @@ const Header = () => {
   const HeaderStyle = "Pampanga State University";
   const { user, logout } = useAuth();
 
-    const getDashboardPath = (user_type?: string): string => {
-  switch (user_type?.toUpperCase()) { // Convert to uppercase for case insensitivity
-    case "ADMIN":
-      return "/AdminDashboard";
-    case "HEAD":
-      return "/HeadDashboard";
-    case "STAFF":
-      return "/StaffDashboard";
-    default:
-      return "/dashboard"; // Fallback for undefined or invalid types
-  }
-};
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
-  //   const handleLogout = useCallback(() => {
-  //   logout();
-  //   navigate("/");
-  // }, [logout, navigate]);
+  const getDashboardPath = (user_type?: string): string => {
+    if (!user_type) return "/login"; // or your default login path
+
+    switch (user_type.toUpperCase()) {
+      case "ADMIN":
+        return "/AdminDashboard";
+      case "HEAD":
+        return "/HeadDashboard";
+      case "STAFF":
+        return "/StaffDashboard";
+      default:
+        return "/login"; // Redirect to login if user type is invalid
+    }
+  };
 
   const toggleInfoSidebar = useCallback(() => {
     setIsInfoSidebarOpen((prev) => !prev);
@@ -121,21 +124,16 @@ const Header = () => {
     };
   }, [closeAllDropdowns]);
 
-const mainMenuItems = useMemo<MenuItem[]>(() => {
+  const mainMenuItems = useMemo<MenuItem[]>(() => {
     if (!user) return [];
-    
+
     return [
       {
         icon: <FaTachometerAlt />,
         label: "Dashboard",
         path: getDashboardPath(user.user_type),
       },
-      {
-        icon: <FaCog />,
-        label: "Settings",
-        path: "/settings",
-        onClick: () => navigate("/settings"),
-      },
+
       {
         icon: <FaUserShield />,
         label: "Admin Portal",
@@ -144,12 +142,17 @@ const mainMenuItems = useMemo<MenuItem[]>(() => {
       },
     ];
   }, [navigate, user]);
-  
 
   const profileMenuItems = useMemo<MenuItem[]>(
     () => [
       { icon: <FaUserCircle />, label: "Profile", path: "/profile" },
       { icon: <FaUserEdit />, label: "Edit Account", path: "/profile/edit" },
+      {
+        icon: <FaCog />,
+        label: "Settings",
+        path: "/settings",
+        onClick: () => navigate("/settings"),
+      },
       {
         icon: <FaSignOutAlt />,
         label: "Logout",
@@ -196,23 +199,26 @@ const mainMenuItems = useMemo<MenuItem[]>(() => {
 
   const renderDropdownItem = useCallback(
     (item: MenuItem) => (
-      <a
+      <button
         key={item.path}
-        href={item.onClick ? "#" : item.path} // use "#" to prevent default nav if using onClick
-        className={`flex items-center px-4 py-2 text-sm hover:bg-gray-600 transition-colors ${item.className || ""}`}
+        className={`flex items-center px-4 py-2 text-sm hover:bg-gray-600 transition-colors w-full text-left ${
+          item.className || ""
+        }`}
         onClick={(e) => {
+          e.preventDefault();
           closeAllDropdowns();
           if (item.onClick) {
-            e.preventDefault(); // prevent default if using navigate
             item.onClick();
+          } else {
+            navigate(item.path);
           }
         }}
       >
         <span className="mr-2">{item.icon}</span>
         {item.label}
-      </a>
+      </button>
     ),
-    [closeAllDropdowns]
+    [closeAllDropdowns, navigate]
   );
 
   return (

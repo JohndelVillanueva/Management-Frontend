@@ -7,6 +7,8 @@ import SignupPage from "../pages/SignupPage";
 import HeadDashboard from "../pages/head/HeadDashboard"; // Ensure the file exists at 'src/pages/head/HeadDashboard.tsx' or adjust the path accordingly
 import { AuthProvider } from "../context/AuthContext";
 import StaffDashboard from "../pages/staff/StaffDashboard"; // Ensure the file exists at 'src/pages/staff/StaffDashboard.tsx' or adjust the path accordingly
+import ProtectedRoute from "../components/routes/ProtectedRoutes.js"; // Ensure the file exists at 'src/components/ProtectedRoute.tsx' or adjust the path accordingly
+import VerifyEmail from "../pages/VerifyEmail.js";
 
 export default function routes() {
   return (
@@ -17,9 +19,33 @@ export default function routes() {
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignupPage />} />
-            <Route path="/AdminDashboard" element={<AdminDashboard />} />
-            <Route path="/HeadDashboard" element={<HeadDashboard />} />
-            <Route path="/StaffDashboard" element={<StaffDashboard />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route
+              path="/AdminDashboard"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/HeadDashboard"
+              element={
+                <ProtectedRoute>
+                  <HeadDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/StaffDashboard"
+              element={
+                <ProtectedRoute>
+                  <StaffDashboard />
+                </ProtectedRoute>
+              }
+            />
+            {/* <Route path="/HeadDashboard" element={<HeadDashboard />} />
+            <Route path="/StaffDashboard" element={<StaffDashboard />} /> */}
           </Routes>
         </Layout>
       </AuthProvider>

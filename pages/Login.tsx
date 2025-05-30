@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   EnvelopeIcon,
   LockClosedIcon,
@@ -7,6 +7,7 @@ import {
   AcademicCapIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
+import { toast } from "react-toastify";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -28,6 +29,15 @@ export default function LoginPage() {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
+  const [searchParams] = useSearchParams();
+useEffect(() => {
+  if (searchParams.get("verified") === "true") {
+    toast.success("Email verified successfully!");
+  }
+  if (searchParams.get("error")) {
+    toast.error(`Verification failed: ${searchParams.get("error")}`);
+  }
+}, []);
 
 const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
@@ -69,13 +79,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       // Redirect based on user type
       switch (data.user.user_type) {
         case "ADMIN":
-          navigate("/admindashboard");
+          navigate("/AdminDashboard");
           break;
         case "HEAD":
-          navigate("/headdashboard");
+          navigate("/HeadDashboard");
           break;
         case "STAFF":
-          navigate("/staffdashboard");
+          navigate("/StaffDashboard");
           break;
         default:
           navigate("/dashboard");
