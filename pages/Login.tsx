@@ -30,79 +30,78 @@ export default function LoginPage() {
     }));
   };
   const [searchParams] = useSearchParams();
-useEffect(() => {
-  if (searchParams.get("verified") === "true") {
-    toast.success("Email verified successfully!");
-  }
-  if (searchParams.get("error")) {
-    toast.error(`Verification failed: ${searchParams.get("error")}`);
-  }
-}, []);
-
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError("");
-
-  try {
-    const response = await fetch(`${baseUrl}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: formData.email,
-        password: formData.password,
-        rememberMe: formData.rememberMe,
-      }),
-      credentials: "include",
-    });
-
-    const data = await response.json();
-    console.log("Full response:", { status: response.status, data });
-
-    if (!response.ok) {
-      if (data.code === "USER_NOT_VERIFIED") {
-        console.log("Verification required - full response data:", data);
-        throw new Error(
-          "Account not verified. A new verification email has been sent to your email address."
-        );
-      }
-      throw new Error(data.message || "Login failed");
+  useEffect(() => {
+    if (searchParams.get("verified") === "true") {
+      toast.success("Email verified successfully!");
     }
-
-    // Add these lines for successful login handling
-    if (data.token && data.user) {
-      // Call your auth context's login function
-      login(data.token, data.user, formData.rememberMe);
-      
-      // Redirect based on user type
-      switch (data.user.user_type) {
-        case "ADMIN":
-          navigate("/AdminDashboard");
-          break;
-        case "HEAD":
-          navigate("/HeadDashboard");
-          break;
-        case "STAFF":
-          navigate("/StaffDashboard");
-          break;
-        default:
-          navigate("/dashboard");
-      }
-    } else {
-      throw new Error("Invalid response format - missing token or user data");
+    if (searchParams.get("error")) {
+      toast.error(`Verification failed: ${searchParams.get("error")}`);
     }
+  }, []);
 
-  } catch (err) {
-    console.error("Login error:", err);
-    setError(
-      err instanceof Error ? err.message : "An unexpected error occurred"
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${baseUrl}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          rememberMe: formData.rememberMe,
+        }),
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      console.log("Full response:", { status: response.status, data });
+
+      if (!response.ok) {
+        if (data.code === "USER_NOT_VERIFIED") {
+          console.log("Verification required - full response data:", data);
+          throw new Error(
+            "Account not verified. A new verification email has been sent to your email address."
+          );
+        }
+        throw new Error(data.message || "Login failed");
+      }
+
+      // Add these lines for successful login handling
+      if (data.token && data.user) {
+        // Call your auth context's login function
+        login(data.token, data.user, formData.rememberMe);
+
+        // Redirect based on user type
+        switch (data.user.user_type) {
+          case "ADMIN":
+            navigate("/AdminDashboard");
+            break;
+          case "HEAD":
+            navigate("/HeadDashboard");
+            break;
+          case "STAFF":
+            navigate("/StaffDashboard");
+            break;
+          default:
+            navigate("/dashboard");
+        }
+      } else {
+        throw new Error("Invalid response format - missing token or user data");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 relative">
@@ -238,12 +237,6 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
               )}
             </div>
           )}
-
-          {/* {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )} */}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
