@@ -12,18 +12,16 @@ import {
   FaSignOutAlt,
   FaUserEdit,
 } from "react-icons/fa";
-import InfoSideBar from "./InfoSideBar"; // Adjust the import path as needed
-import { useAuth } from "../context/AuthContext"; // Adjust the import path as needed
+import InfoSideBar from "./InfoSideBar";
+import { useAuth } from "../context/AuthContext";
 
 type MenuItem = {
   icon: React.ReactNode;
   label: string;
   path: string;
   className?: string;
-  onClick?: () => void; // Added onClick to MenuItem type
+  onClick?: () => void;
 };
-
-// type UserType = 'ADMIN' | 'HEAD' | 'STAFF';
 
 const DEFAULT_PROFILE_IMAGE =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptMCAyYzQuNDE4IDAgOCAzLjU4MiA4IDhzLTMuNTgyIDgtOCA4LTgtMy41ODItOC04IDMuNTgyLTggOC04eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==";
@@ -38,31 +36,26 @@ const Header = () => {
   const navigate = useNavigate();
   const HeaderStyle = "Pampanga State University";
   const { user, logout } = useAuth();
+  
+  const dashboardPaths: Record<string, string> = {
+    ADMIN: "/AdminDashboard",
+    HEAD: "/HeadDashboard",
+    STAFF: "/StaffDashboard",
+  };
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
+    } else {
+      const path = dashboardPaths[user.user_type];
+      if (window.location.pathname === "/" || window.location.pathname === "/login") {
+        navigate(path);
+      }
     }
   }, [user, navigate]);
 
-  const getDashboardPath = (user_type?: string): string => {
-    if (!user_type) return "/login"; // or your default login path
-
-    switch (user_type.toUpperCase()) {
-      case "ADMIN":
-        return "/AdminDashboard";
-      case "HEAD":
-        return "/HeadDashboard";
-      case "STAFF":
-        return "/StaffDashboard";
-      default:
-        return "/login"; // Redirect to login if user type is invalid
-    }
-  };
-
   const toggleInfoSidebar = useCallback(() => {
     setIsInfoSidebarOpen((prev) => !prev);
-    // Close other dropdowns when opening info sidebar
     if (!isInfoSidebarOpen) {
       setIsDropdownOpen(false);
       setIsProfileDropdownOpen(false);
@@ -83,7 +76,6 @@ const Header = () => {
     setIsProfileDropdownOpen(false);
   }, []);
 
-  // Close dropdowns when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | KeyboardEvent) => {
       if (event instanceof KeyboardEvent && event.key === "Escape") {
@@ -131,15 +123,15 @@ const Header = () => {
       {
         icon: <FaTachometerAlt />,
         label: "Dashboard",
-        path: getDashboardPath(user.user_type),
+        path: dashboardPaths[user.user_type],
+        onClick: () => navigate(dashboardPaths[user.user_type])
       },
-
-      {
+      ...(user.user_type === 'ADMIN' ? [{
         icon: <FaUserShield />,
         label: "Admin Portal",
         path: "/admin/AdminDashboard",
         onClick: () => navigate("/admin/AdminDashboard"),
-      },
+      }] : []),
     ];
   }, [navigate, user]);
 
@@ -156,11 +148,15 @@ const Header = () => {
       {
         icon: <FaSignOutAlt />,
         label: "Logout",
-        path: "/logout",
+        path: "#",
         className: "text-red-400",
+        onClick: () => {
+          logout();
+          navigate("/login");
+        },
       },
     ],
-    []
+    [logout, navigate]
   );
 
   const navIcons = useMemo(
@@ -224,7 +220,6 @@ const Header = () => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between items-center z-50 shadow-md">
-        {/* Logo + Header Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
@@ -265,7 +260,6 @@ const Header = () => {
           )}
         </div>
 
-        {/* Navigation Icons + Profile Dropdown */}
         <nav className="flex items-center space-x-4">
           {navIcons.map((navItem) => (
             <button
@@ -280,7 +274,6 @@ const Header = () => {
             </button>
           ))}
 
-          {/* Profile Dropdown */}
           <div className="relative" ref={profileDropdownRef}>
             <button
               type="button"
@@ -316,7 +309,6 @@ const Header = () => {
         </nav>
       </header>
 
-      {/* Info Sidebar */}
       <InfoSideBar
         infoSidebarRef={infoSidebarRef as React.RefObject<HTMLDivElement>}
         isInfoSidebarOpen={isInfoSidebarOpen}

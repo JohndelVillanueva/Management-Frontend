@@ -34,11 +34,10 @@ export default function LoginPage() {
         navigate("/StaffDashboard");
         break;
       default:
-        navigate("/dashboard");
+        navigate("/login");
     }
   };
 
-  // Handle redirection if user is already authenticated
   useEffect(() => {
     if (user && !authLoading) {
       redirectByUserType(user.user_type);
@@ -95,7 +94,22 @@ export default function LoginPage() {
       }
 
       if (data.token && data.user) {
+        // Clear both storages first to prevent conflicts
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+
+        // Store in correct storage
+        const storage = formData.rememberMe ? localStorage : sessionStorage;
+        storage.setItem("token", data.token);
+        storage.setItem("user", JSON.stringify(data.user));
+
+        // Call auth context login
         login(data.token, data.user, formData.rememberMe);
+
+        // Redirect user based on user_type
+        redirectByUserType(data.user.user_type);
       } else {
         throw new Error("Invalid response format - missing token or user data");
       }
