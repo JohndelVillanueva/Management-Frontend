@@ -15,12 +15,35 @@ export default function LoginPage() {
     password: "",
     rememberMe: false,
   });
-  const { login } = useAuth(); // Get the login function from context
+  const { login, user, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const baseUrl = import.meta.env.VITE_API_URL;
+
+  const redirectByUserType = (userType: string) => {
+    switch (userType) {
+      case "ADMIN":
+        navigate("/AdminDashboard");
+        break;
+      case "HEAD":
+        navigate("/HeadDashboard");
+        break;
+      case "STAFF":
+        navigate("/StaffDashboard");
+        break;
+      default:
+        navigate("/dashboard");
+    }
+  };
+
+  // Handle redirection if user is already authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      redirectByUserType(user.user_type);
+    }
+  }, [user, authLoading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -29,6 +52,7 @@ export default function LoginPage() {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
+
   const [searchParams] = useSearchParams();
   useEffect(() => {
     if (searchParams.get("verified") === "true") {
@@ -59,11 +83,10 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
-      console.log("Full response:", { status: response.status, data });
+      console.log("Login response:", data);
 
       if (!response.ok) {
         if (data.code === "USER_NOT_VERIFIED") {
-          console.log("Verification required - full response data:", data);
           throw new Error(
             "Account not verified. A new verification email has been sent to your email address."
           );
@@ -71,30 +94,12 @@ export default function LoginPage() {
         throw new Error(data.message || "Login failed");
       }
 
-      // Add these lines for successful login handling
       if (data.token && data.user) {
-        // Call your auth context's login function
         login(data.token, data.user, formData.rememberMe);
-
-        // Redirect based on user type
-        switch (data.user.user_type) {
-          case "ADMIN":
-            navigate("/AdminDashboard");
-            break;
-          case "HEAD":
-            navigate("/HeadDashboard");
-            break;
-          case "STAFF":
-            navigate("/StaffDashboard");
-            break;
-          default:
-            navigate("/dashboard");
-        }
       } else {
         throw new Error("Invalid response format - missing token or user data");
       }
     } catch (err) {
-      console.error("Login error:", err);
       setError(
         err instanceof Error ? err.message : "An unexpected error occurred"
       );
@@ -130,7 +135,6 @@ export default function LoginPage() {
           </svg>
         </div>
       )}
-
       <div
         className={`w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row transform transition-transform duration-300 ${
           isLoading ? "scale-95" : "scale-100"
