@@ -1,197 +1,270 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  DocumentTextIcon, 
+  FolderIcon, 
+  ClockIcon, 
+  CheckCircleIcon,
+  UserGroupIcon,
+  ChartBarIcon,
+  ExclamationTriangleIcon 
+} from '@heroicons/react/24/outline';
 
-type DepartmentModuleType = 
-  | 'Student Records' 
-  | 'Class Scheduling'
-  | 'Grade Management'
-  | 'Attendance Tracking'
-  | 'Faculty Management'
-  | 'Curriculum Planning'
-  | 'Financial Operations'
-  | 'Library System'
-  | 'Health Services'
-  | 'IT Support'
-  | 'Facilities'
-  | 'Transportation'
-  | 'Extracurriculars';
-
-type DepartmentType = 
-  | 'Academics' 
-  | 'Administration'
-  | 'Student Services'
-  | 'Support Services';
-
-interface DepartmentHeadDashboardProps {
-  department: DepartmentType; // The department this head manages
-  isAdmin?: boolean; // Optional admin override
-}
-
-const DepartmentHeadDashboard = ({ department, isAdmin = false }: DepartmentHeadDashboardProps) => {
+const HeadWelcomePage = () => {
   const navigate = useNavigate();
 
-  const handleModuleClick = (module: DepartmentModuleType, moduleDepartment: DepartmentType) => {
-    if (department === moduleDepartment || isAdmin) {
-      navigate(`/${module.toLowerCase().replace(' ', '-')}`);
-    } else {
-      alert(`You don't have permission to access ${moduleDepartment} Department modules`);
+  // Mock data - replace with actual API calls
+  const departmentStats = {
+    totalStaff: 15,
+    activeStaff: 12,
+    pendingSubmissions: 8,
+    completedSubmissions: 45,
+    totalCards: 20,
+    activeCards: 18
+  };
+
+  const recentActivity = [
+    { id: 1, type: 'submission', title: 'Monthly Report Submitted', user: 'John Doe', time: '2 hours ago', status: 'completed' },
+    { id: 2, type: 'card', title: 'New Card Created', user: 'Admin', time: '4 hours ago', status: 'active' },
+    { id: 3, type: 'submission', title: 'Student Records Updated', user: 'Jane Smith', time: '1 day ago', status: 'pending' },
+    { id: 4, type: 'staff', title: 'New Staff Member Added', user: 'HR Department', time: '2 days ago', status: 'completed' },
+  ];
+
+  const upcomingDeadlines = [
+    { id: 1, title: 'Department Quarterly Review', deadline: '2024-01-20', priority: 'high', assignedTo: 'All Staff' },
+    { id: 2, title: 'Budget Report Submission', deadline: '2024-01-25', priority: 'high', assignedTo: 'Finance Team' },
+    { id: 3, title: 'Staff Performance Reviews', deadline: '2024-01-30', priority: 'medium', assignedTo: 'Department Heads' },
+  ];
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'submission':
+        return <DocumentTextIcon className="h-5 w-5 text-blue-500" />;
+      case 'card':
+        return <FolderIcon className="h-5 w-5 text-orange-500" />;
+      case 'staff':
+        return <UserGroupIcon className="h-5 w-5 text-green-500" />;
+      default:
+        return <DocumentTextIcon className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const departments: {
-    name: DepartmentType;
-    color: string;
-    modules: {
-      label: DepartmentModuleType;
-      icon: string;
-    }[];
-  }[] = [
-    {
-      name: 'Academics',
-      color: 'blue',
-      modules: [
-        { label: 'Student Records', icon: '📚' },
-        { label: 'Class Scheduling', icon: '⏰' },
-        { label: 'Grade Management', icon: '📝' },
-        { label: 'Attendance Tracking', icon: '✓' }
-      ]
-    },
-    {
-      name: 'Administration',
-      color: 'green',
-      modules: [
-        { label: 'Faculty Management', icon: '👩‍🏫' },
-        { label: 'Curriculum Planning', icon: '📋' },
-        { label: 'Financial Operations', icon: '💰' }
-      ]
-    },
-    {
-      name: 'Student Services',
-      color: 'purple',
-      modules: [
-        { label: 'Library System', icon: '📖' },
-        { label: 'Health Services', icon: '🏥' },
-        { label: 'Extracurriculars', icon: '⚽' }
-      ]
-    },
-    {
-      name: 'Support Services',
-      color: 'orange',
-      modules: [
-        { label: 'IT Support', icon: '💻' },
-        { label: 'Facilities', icon: '🏫' },
-        { label: 'Transportation', icon: '🚌' }
-      ]
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'text-green-600 bg-green-100';
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'active':
+        return 'text-blue-600 bg-blue-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
     }
-  ];
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'text-red-600 bg-red-100';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'low':
+        return 'text-green-600 bg-green-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
 
   return (
-    <div className="mx-auto px-8 py-6">
-      <div className="mx-auto">
-        <div className="mx-4">
-          <div className="mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-800">
-                {department} Department Dashboard
-              </h1>
-              <p className="mt-2 text-gray-600">
-                Manage your {department} department resources
-              </p>
-            </div>
+    <div className="p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Department Head Dashboard</h1>
+          <p className="text-gray-600">Manage your department's activities and staff performance</p>
+        </div>
 
-            {/* Only show the head's department unless they're admin */}
-            {departments
-              .filter(dept => isAdmin || dept.name === department)
-              .map((dept) => (
-                <div key={dept.name} className="mb-10">
-                  <div className="flex items-center mb-4">
-                    <h2 className={`text-2xl font-semibold text-${dept.color}-700`}>
-                      {dept.name} Department
-                    </h2>
-                    {dept.name === department && (
-                      <span className="ml-2 px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                        Your Department
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {dept.modules.map((module) => (
-                      <div
-                        key={module.label}
-                        onClick={() => handleModuleClick(module.label, dept.name)}
-                        className={`flex flex-col h-32 bg-white rounded-lg shadow-md p-5 cursor-pointer hover:bg-${dept.color}-50 transition-all hover:shadow-lg border-l-4 border-${dept.color}-500 ${
-                          dept.name !== department && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        <div className="text-2xl mb-2">{module.icon}</div>
-                        <h3 className="font-medium text-gray-800">{module.label}</h3>
-                        <p className="mt-1 text-xs text-gray-500">{dept.name} Department</p>
-                        {dept.name !== department && !isAdmin && (
-                          <div className="mt-1 text-xs text-red-500">No access</div>
-                        )}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <UserGroupIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                <p className="text-2xl font-bold text-gray-900">{departmentStats.totalStaff}</p>
+                <p className="text-xs text-green-600">+{departmentStats.activeStaff} active</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircleIcon className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Completed Submissions</p>
+                <p className="text-2xl font-bold text-gray-900">{departmentStats.completedSubmissions}</p>
+                <p className="text-xs text-gray-500">This month</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <ClockIcon className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending Submissions</p>
+                <p className="text-2xl font-bold text-gray-900">{departmentStats.pendingSubmissions}</p>
+                <p className="text-xs text-orange-600">Requires attention</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <FolderIcon className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Cards</p>
+                <p className="text-2xl font-bold text-gray-900">{departmentStats.activeCards}</p>
+                <p className="text-xs text-gray-500">of {departmentStats.totalCards} total</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <ChartBarIcon className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Performance Score</p>
+                <p className="text-2xl font-bold text-gray-900">92%</p>
+                <p className="text-xs text-green-600">+5% this month</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Overdue Tasks</p>
+                <p className="text-2xl font-bold text-gray-900">3</p>
+                <p className="text-xs text-red-600">Needs immediate action</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Recent Activity */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-800">Recent Activity</h2>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      {getActivityIcon(activity.type)}
+                      <div className="ml-3">
+                        <p className="font-medium text-gray-900">{activity.title}</p>
+                        <p className="text-sm text-gray-500">by {activity.user} • {activity.time}</p>
                       </div>
-                    ))}
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(activity.status)}`}>
+                      {activity.status}
+                    </span>
                   </div>
-                </div>
-              ))}
-
-            {/* Department-specific Overview */}
-            <div className="mt-12 bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">{department} Department Overview</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-gray-500">Active Staff</p>
-                  <p className="text-2xl font-bold">
-                    {department === 'Academics' ? '42' : 
-                     department === 'Administration' ? '15' :
-                     department === 'Student Services' ? '23' : '18'}
-                  </p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-gray-500">Pending Tasks</p>
-                  <p className="text-2xl font-bold">7</p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-gray-500">Recent Updates</p>
-                  <p className="text-2xl font-bold">3</p>
-                </div>
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-gray-500">Open Requests</p>
-                  <p className="text-2xl font-bold">5</p>
-                </div>
+                ))}
               </div>
-            </div>
-
-            {/* Quick Links */}
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-4">Quick Links</h2>
-              <div className="flex flex-wrap gap-3">
+              <div className="mt-6">
                 <button 
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                  onClick={() => navigate('/department-calendar')}
+                  onClick={() => navigate('/reports')}
+                  className="w-full text-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  Department Calendar
-                </button>
-                <button 
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                  onClick={() => navigate('/staff-directory')}
-                >
-                  Staff Directory
-                </button>
-                <button 
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                  onClick={() => navigate(`/department-reports`)}
-                >
-                  {department} Reports
-                </button>
-                <button 
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                  onClick={() => navigate('/messages')}
-                >
-                  Messages
+                  View All Activity
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Upcoming Deadlines */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-800">Upcoming Deadlines</h2>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {upcomingDeadlines.map((deadline) => (
+                  <div key={deadline.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <ClockIcon className="h-5 w-5 text-gray-400 mr-3" />
+                      <div>
+                        <p className="font-medium text-gray-900">{deadline.title}</p>
+                        <p className="text-sm text-gray-500">Due: {deadline.deadline} • {deadline.assignedTo}</p>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(deadline.priority)}`}>
+                      {deadline.priority}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6">
+                <button 
+                  onClick={() => navigate('/staff')}
+                  className="w-full text-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Manage Staff
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button 
+              onClick={() => navigate('/staff')}
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <UserGroupIcon className="h-6 w-6 text-blue-600 mr-3" />
+              <span className="font-medium text-gray-900">Staff Management</span>
+            </button>
+            <button 
+              onClick={() => navigate('/reports')}
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <ChartBarIcon className="h-6 w-6 text-green-600 mr-3" />
+              <span className="font-medium text-gray-900">View Reports</span>
+            </button>
+            <button 
+              onClick={() => navigate('/cards')}
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <FolderIcon className="h-6 w-6 text-orange-600 mr-3" />
+              <span className="font-medium text-gray-900">Manage Cards</span>
+            </button>
+            <button 
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <DocumentTextIcon className="h-6 w-6 text-purple-600 mr-3" />
+              <span className="font-medium text-gray-900">Create Report</span>
+            </button>
           </div>
         </div>
       </div>
@@ -199,4 +272,4 @@ const DepartmentHeadDashboard = ({ department, isAdmin = false }: DepartmentHead
   );
 };
 
-export default DepartmentHeadDashboard;
+export default HeadWelcomePage;

@@ -8,8 +8,8 @@ import {
   FaCog,
   FaUserShield,
   FaUserCircle,
-  FaSignOutAlt,
   FaUserEdit,
+  FaBars,
 } from "react-icons/fa";
 import InfoSideBar from "./InfoSideBar";
 import { useAuth } from "../context/AuthContext";
@@ -32,7 +32,7 @@ const Header = () => {
   const infoSidebarRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const HeaderStyle = "Pampanga State University";
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const dashboardPaths: Record<string, string> = {
     ADMIN: "/AdminDashboard",
@@ -114,18 +114,8 @@ const Header = () => {
         path: "/settings",
         onClick: () => navigate("/settings"),
       },
-      {
-        icon: <FaSignOutAlt />,
-        label: "Logout",
-        path: "#",
-        className: "text-red-400",
-        onClick: () => {
-          logout();
-          navigate("/login");
-        },
-      },
     ],
-    [logout, navigate]
+    [navigate]
   );
 
   const navIcons = useMemo(
@@ -177,7 +167,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between items-center z-50 shadow-md">
+      <header className="bg-white text-gray-800 p-4 flex justify-between items-center z-30 shadow-sm border-b border-gray-200">
         <div className="flex items-center">
           <img
             src="/Images/images.png"
@@ -185,7 +175,7 @@ const Header = () => {
             className="h-8 w-8 mr-3 rounded-full object-cover"
             onError={handleImageError}
           />
-          <h1 className="text-2xl font-bold">{HeaderStyle}</h1>
+          <h1 className="text-xl font-bold text-gray-800">{HeaderStyle}</h1>
         </div>
 
         <nav className="flex items-center space-x-4">
@@ -195,7 +185,7 @@ const Header = () => {
               onClick={
                 navItem.onClick || (() => (window.location.href = navItem.path))
               }
-              className="hover:text-gray-300 transition-colors p-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="hover:text-orange-600 transition-colors p-1 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
               aria-label={navItem.label}
             >
               {navItem.icon}
@@ -205,7 +195,7 @@ const Header = () => {
           <div className="relative" ref={profileDropdownRef}>
             <button
               type="button"
-              className="flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+              className="flex items-center focus:outline-none focus:ring-2 focus:ring-orange-500 rounded-full"
               onClick={toggleProfileDropdown}
               aria-expanded={isProfileDropdownOpen}
               aria-haspopup="true"
@@ -214,14 +204,14 @@ const Header = () => {
               <img
                 src="/profile.jpg"
                 alt="User profile"
-                className="h-8 w-8 rounded-full border-2 border-gray-400 hover:border-white transition-colors object-cover"
+                className="h-8 w-8 rounded-full border-2 border-gray-300 hover:border-orange-500 transition-colors object-cover"
                 onError={handleImageError}
               />
             </button>
 
             {isProfileDropdownOpen && (
               <div
-                className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg z-50"
+                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
                 role="menu"
               >
                 <div className="py-1">

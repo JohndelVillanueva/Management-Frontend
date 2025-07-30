@@ -63,11 +63,7 @@ export default function SignupPage() {
 
         const data = await response.json();
 
-        if (!data.success) {
-          throw new Error(data.message || "Failed to load departments");
-        }
-
-        setDepartments(data.data || []);
+        setDepartments(data || []);
       } catch (err) {
         if (!abortController.signal.aborted) {
           setDepartmentError(
@@ -106,7 +102,8 @@ export default function SignupPage() {
       setError("Username is required");
       return false;
     }
-    if (!formData.department) {
+    // Only require department for non-admin users
+    if (userType !== "ADMIN" && !formData.department) {
       setError("Please select a department");
       return false;
     }
@@ -128,35 +125,77 @@ export default function SignupPage() {
 
     setIsLoading(true);
 
+    // Debug: Log the form data being sent
+    const requestData = {
+      username: formData.username,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+      department: userType === "ADMIN" ? null : formData.department,
+      userType: userType?.toUpperCase(),
+    };
+    
+    console.log("Sending signup data:", requestData);
+
     try {
       const response = await fetch(`${baseUrl}/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          username: formData.username,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
-          department: formData.department,
-          userType: userType?.toUpperCase(),
-        }),
+        body: JSON.stringify(requestData),
       });
+
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
 
       if (!response.ok) {
         let errorData;
         try {
           errorData = await response.json();
+          console.log("Error response data:", errorData);
         } catch (jsonError) {
+          console.error("Failed to parse error response:", jsonError);
           throw new Error(response.statusText || "Registration failed");
         }
-        throw new Error(errorData.error || "Registration failed");
+        
+        // Show more specific error messages
+        if (errorData.details && Array.isArray(errorData.details)) {
+          // Handle Zod validation errors (array of error objects)
+          const errorMessages = errorData.details.map((error: any) => {
+            if (error.path && error.message) {
+              return `${error.path.join('.')}: ${error.message}`;
+            }
+            return error.message || 'Validation error';
+          }).join(', ');
+          throw new Error(`${errorData.error}: ${errorMessages}`);
+        } else if (errorData.details && typeof errorData.details === 'string') {
+          throw new Error(`${errorData.error}: ${errorData.details}`);
+        } else if (errorData.missing && typeof errorData.missing === 'object') {
+          // Handle missing fields object
+          const missingFields = Object.entries(errorData.missing)
+            .filter(([field, isMissing]) => isMissing)
+            .map(([field]) => field)
+            .join(', ');
+          throw new Error(`${errorData.error}: Missing required fields: ${missingFields}`);
+        } else if (errorData.details && typeof errorData.details === 'object') {
+          // Handle object details (like missing fields)
+          const missingFields = Object.entries(errorData.details)
+            .filter(([field, isMissing]) => isMissing)
+            .map(([field]) => field)
+            .join(', ');
+          throw new Error(`${errorData.error}: Missing required fields: ${missingFields}`);
+        } else if (errorData.error) {
+          throw new Error(errorData.error);
+        } else {
+          throw new Error("Registration failed");
+        }
       }
 
-      await response.json();
+      const successData = await response.json();
+      console.log("Success response:", successData);
       setIsSuccess(true);
       setTimeout(() => {
         navigate("/login");
@@ -409,53 +448,70 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Department Dropdown - Corrected */}
-            <div>
-              <label
-                htmlFor="department"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Department
-              </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
-                </div>
-                {isDepartmentsLoading ? (
-                  <div className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-100 animate-pulse">
-                    Loading departments...
+            {/* Department Dropdown - Only show for non-admin users */}
+            {userType !== "ADMIN" ? (
+              <div>
+                <label
+                  htmlFor="department"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Department
+                </label>
+                <div className="relative rounded-lg shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
                   </div>
-                ) : departmentError ? (
-                  <div className="block w-full pl-9 pr-3 py-2 text-sm border border-red-300 rounded-lg bg-red-50 text-red-600">
-                    {departmentError}
-                  </div>
-                ) : (
-                  <select
-                    id="department"
-                    name="department"
-                    required
-                    value={formData.department}
-                    onChange={handleChange}
-                    className="block w-full pl-9 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none bg-white"
-                  >
-                    <option value="" disabled>
-                      Select a department
-                    </option>
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.name}>
-                        {dept.name}
+                  {isDepartmentsLoading ? (
+                    <div className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-100 animate-pulse">
+                      Loading departments...
+                    </div>
+                  ) : departmentError ? (
+                    <div className="block w-full pl-9 pr-3 py-2 text-sm border border-red-300 rounded-lg bg-red-50 text-red-600">
+                      {departmentError}
+                    </div>
+                  ) : (
+                    <select
+                      id="department"
+                      name="department"
+                      required
+                      value={formData.department}
+                      onChange={handleChange}
+                      className="block w-full pl-9 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none bg-white"
+                    >
+                      <option value="" disabled>
+                        Select a department
                       </option>
-                    ))}
-                  </select>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.name}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                {departmentError && (
+                  <p className="mt-1 text-sm text-red-600">{departmentError}</p>
                 )}
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+              </div>
+            ) : (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-blue-700">
+                      <strong>Admin Access:</strong> Administrators have access to all departments and don't need to be assigned to a specific department.
+                    </p>
+                  </div>
                 </div>
               </div>
-              {departmentError && (
-                <p className="mt-1 text-sm text-red-600">{departmentError}</p>
-              )}
-            </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

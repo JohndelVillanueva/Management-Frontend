@@ -9,6 +9,10 @@ import { AuthProvider } from "../context/AuthContext";
 import StaffDashboard from "../pages/staff/StaffDashboard"; // Ensure the file exists at 'src/pages/staff/StaffDashboard.tsx' or adjust the path accordingly
 import ProtectedRoute from "../components/routes/ProtectedRoutes.js"; // Ensure the file exists at 'src/components/ProtectedRoute.tsx' or adjust the path accordingly
 import VerifyEmail from "../pages/VerifyEmail.js";
+import Cards from '../pages/cardsDetails.js';
+import CardDetails from '../pages/cardsDetails.js';
+import SubmissionDetails from "../pages/SubmissionDetails"; // Ensure the path is correct and the component exists
+import Departments from "../pages/Departments";
 
 export default function routes() {
   return (
@@ -20,6 +24,22 @@ export default function routes() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route
+              path="/CardDetails/:id"
+              element={
+                <ProtectedRoute>
+                  <CardDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/submissions/:submissionId"
+              element={
+                <ProtectedRoute>
+                  <SubmissionDetails />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/AdminDashboard"
               element={
@@ -44,6 +64,23 @@ export default function routes() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/cards"
+              element={
+                <ProtectedRoute>
+                  <Cards />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/departments"
+              element={
+                <ProtectedRoute>
+                  <Departments />
+                </ProtectedRoute>
+              }
+            />
+
             {/* <Route path="/HeadDashboard" element={<HeadDashboard />} />
             <Route path="/StaffDashboard" element={<StaffDashboard />} /> */}
           </Routes>
