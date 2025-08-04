@@ -182,7 +182,7 @@ const CardDetails = () => {
             <div
               key={submission.id}
               className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
-              onClick={() => navigate(`/submission/${submission.id}`)}
+              onClick={() => navigate(`/submissions/${submission.id}`)}
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">

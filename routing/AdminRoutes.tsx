@@ -11,7 +11,7 @@ import ProtectedRoute from "../components/routes/ProtectedRoutes.js"; // Ensure 
 import VerifyEmail from "../pages/VerifyEmail.js";
 import Cards from '../pages/cardsDetails.js';
 import CardDetails from '../pages/cardsDetails.js';
-import SubmissionDetails from "../pages/SubmissionDetails"; // Ensure the path is correct and the component exists
+import SubmissionDetails from "../pages/submissionDetails"; // Ensure the path is correct and the component exists
 import Departments from "../pages/Departments";
 
 export default function routes() {
