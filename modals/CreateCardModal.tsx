@@ -15,7 +15,12 @@ interface HeadUser {
 interface CreateCardModalProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (title: string, description: string, departmentId: number) => Promise<boolean>;
+  onCreate: (
+    title: string, 
+    description: string, 
+    departmentId: number,
+    headId?: number | null  // Add this parameter
+  ) => Promise<boolean>;
   loading: boolean;
   error: string;
 }
@@ -73,16 +78,22 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({ open, onClose, onCrea
 
   if (!open) return null;
 
-  const handleCreate = async () => {
-    if (!title.trim() || !departmentId) return;
-    const success = await onCreate(title, description, departmentId);
-    if (success) {
-      setTitle('');
-      setDescription('');
-      setDepartmentId(null);
-      onClose();
-    }
-  };
+const handleCreate = async () => {
+  if (!title.trim() || !departmentId) return;
+  const success = await onCreate(
+    title, 
+    description, 
+    departmentId,
+    selectedHeadId  // Pass the selected headId
+  );
+  if (success) {
+    setTitle('');
+    setDescription('');
+    setDepartmentId(null);
+    setSelectedHeadId(null);
+    onClose();
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-blur bg-opacity-50 backdrop-blur-sm">

@@ -9,7 +9,8 @@ import { AuthProvider } from "../context/AuthContext";
 import StaffDashboard from "../pages/staff/StaffDashboard"; // Ensure the file exists at 'src/pages/staff/StaffDashboard.tsx' or adjust the path accordingly
 import ProtectedRoute from "../components/routes/ProtectedRoutes.js"; // Ensure the file exists at 'src/components/ProtectedRoute.tsx' or adjust the path accordingly
 import VerifyEmail from "../pages/VerifyEmail.js";
-import Cards from '../pages/cardsDetails.js';
+// import Cards from '../pages/cardsDetails.js';
+import CardsPage from "../pages/cardsPage";
 import CardDetails from '../pages/cardsDetails.js';
 import SubmissionDetails from "../pages/submissionDetails"; // Ensure the path is correct and the component exists
 import Departments from "../pages/Departments";
@@ -68,7 +69,7 @@ export default function routes() {
               path="/cards"
               element={
                 <ProtectedRoute>
-                  <Cards />
+                  <CardsPage />
                 </ProtectedRoute>
               }
             />

@@ -1,25 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactModal from "react-modal";
-import { DocumentTextIcon, UserIcon, CalendarIcon, DocumentIcon } from "@heroicons/react/24/outline";
-
-// File upload button and logic will be added to the component below
+import { DocumentTextIcon, UserIcon, CalendarIcon, DocumentIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
+import UploadModal from "../modals/UploadModal";
 
 const CardDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // Debug: Log the id parameter and current URL
   console.log('Card ID from params:', id);
   console.log('Current URL:', window.location.href);
   console.log('Pathname:', window.location.pathname);
+  
   const [card, setCard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [submissions, setSubmissions] = useState<any[]>([]); // Add this line
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Add these at the top of your component
-  console.log("Component rendering..."); // Debugging line
+  console.log("Component rendering...");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,96 +50,16 @@ const CardDetails = () => {
     fetchData();
   }, [id]);
 
-  // File upload state and ref
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalFile, setModalFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [type, setType] = useState("Document");
-
-  // Helper to trigger file input
-  const handleUploadClick = () => {
-    setModalOpen(true);
-  };
-
-  // Handle modal file input
-  const handleModalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setModalFile(e.target.files[0]);
-    }
-  };
-  const resetModal = () => {
-    setModalFile(null);
-    setTitle("");
-    setDescription("");
-    setType("Document");
-  };
-
-  // Handle modal submit
-  const handleModalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!modalFile || !title || !type) {
-      alert("Please fill in all required fields.");
-      return;
-    }
-
-    if (!id) {
-      alert("Card ID is missing. Please refresh the page and try again.");
-      return;
-    }
-
-    setUploading(true);
+  const handleSubmissionSuccess = async () => {
+    if (!id) return;
+    
     try {
-      const formData = new FormData();
-      formData.append("file", modalFile);
-      formData.append("title", title);
-      formData.append("description", description || "");
-      formData.append("type", type);
-      if (card?.department?.id) {
-        formData.append("departmentId", card.department.id);
-      }
-
-      console.log('Submitting to card ID:', id);
-      const response = await fetch(
-        `http://localhost:3000/submission/${id}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || result.message || "Upload failed");
-      }
-
-      // Refresh data
       const res = await fetch(`http://localhost:3000/submission/${id}`);
       const data = await res.json();
       setSubmissions(data);
       setModalOpen(false);
-      resetModal();
     } catch (err) {
-      console.error("Submission error:", err);
-      alert(`Error: ${err.message}`);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleModalClose = () => {
-    if (!uploading) {
-      setModalOpen(false);
-      setModalFile(null);
-      setTitle("");
-      setDescription("");
-      setType("Document");
+      console.error("Error refreshing submissions:", err);
     }
   };
 
@@ -150,7 +69,7 @@ const CardDetails = () => {
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header with updated upload button */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -162,9 +81,11 @@ const CardDetails = () => {
           </div>
           <button
             onClick={() => setModalOpen(true)}
-            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+            className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+            aria-label="Upload file"
           >
-            + Submit File
+            <ArrowUpTrayIcon className="h-5 w-5" />
+            <span>Upload</span>
           </button>
         </div>
 
@@ -220,7 +141,7 @@ const CardDetails = () => {
           ))}
         </div>
 
-        {/* Empty State */}
+        {/* Empty State with updated upload button */}
         {submissions.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📁</div>
@@ -228,109 +149,26 @@ const CardDetails = () => {
             <p className="text-gray-600 mb-6">Be the first to submit a file for this card</p>
             <button
               onClick={() => setModalOpen(true)}
-              className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+              className="flex items-center justify-center gap-2 bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium mx-auto"
             >
-              Submit First File
+              <ArrowUpTrayIcon className="h-5 w-5" />
+              <span>Upload First File</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* File Upload Modal */}
-      <ReactModal
+      <UploadModal
         isOpen={modalOpen}
         onRequestClose={() => setModalOpen(false)}
-        style={customModalStyles}
-        contentLabel="Upload File Modal"
-      >
-        <form onSubmit={handleModalSubmit} className="flex flex-col gap-4">
-          <h3 className="text-lg font-bold mb-2">Submit New File</h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">File</label>
-            <input
-              type="file"
-              accept="*"
-              onChange={handleModalFileChange}
-              required
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input
-              type="text"
-              placeholder="Enter submission title"
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-            <textarea
-              placeholder="Enter description"
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-            <select
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              required
-            >
-              <option value="Document">Document</option>
-              <option value="Image">Image</option>
-              <option value="PDF">PDF</option>
-              <option value="Spreadsheet">Spreadsheet</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-          <div className="flex gap-2 justify-end mt-4">
-            <button
-              type="button"
-              className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 transition-colors"
-              onClick={() => setModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors"
-              disabled={uploading}
-            >
-              {uploading ? "Uploading..." : "Submit"}
-            </button>
-          </div>
-        </form>
-      </ReactModal>
+        onSubmissionSuccess={handleSubmissionSuccess}
+        cardId={id}
+        departmentId={card?.department?.id}
+      />
     </div>
   );
 };
 
-// Modal styles for ReactModal
-const customModalStyles = {
-  content: {
-    top: "50%",
-    left: "50%",
-    right: "auto",
-    bottom: "auto",
-    marginRight: "-50%",
-    transform: "translate(-50%, -50%)",
-    minWidth: "350px",
-    maxWidth: "90vw",
-    padding: "2rem",
-    borderRadius: "0.5rem",
-  },
-  overlay: {
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-};
 ReactModal.setAppElement("#root");
 
 export default CardDetails;
