@@ -36,14 +36,14 @@ const SchoolDashboard = () => {
     navigate(`/cards/${encodeURIComponent(module)}`);
   };
 
-  const handleCreateCard = async (title: string, description: string, departmentId: number,  headId?: number | null) => {
+  const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null) => {
     setLoading(true);
     setError('');
     try {
       const response = await fetch('http://localhost:3000/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, departmentId, headId}),
+        body: JSON.stringify({ title, description, departmentId, headId }),
         credentials: 'include',
       });
       if (!response.ok) {

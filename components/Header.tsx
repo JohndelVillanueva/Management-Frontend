@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -25,7 +25,7 @@ type MenuItem = {
 const DEFAULT_PROFILE_IMAGE =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptMCAyYzQuNDE4IDAgOCAzLjU4MiA4IDhzLTMuNTgyIDgtOCA4LTgtMy41ODItOC04IDMuNTgyLTggOC04eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==";
 
-const Header = () => {
+const Header: React.FC = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isInfoSidebarOpen, setIsInfoSidebarOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
@@ -33,6 +33,7 @@ const Header = () => {
   const navigate = useNavigate();
   const HeaderStyle = "Pampanga State University";
   const { user } = useAuth();
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   const dashboardPaths: Record<string, string> = {
     ADMIN: "/AdminDashboard",
@@ -141,6 +142,16 @@ const Header = () => {
     });
   }, []);
 
+  const profileImageSrc = useMemo(() => {
+    const avatar = user?.avatar as string | undefined;
+    if (!avatar) return DEFAULT_PROFILE_IMAGE;
+    if (avatar.startsWith("http://") || avatar.startsWith("https://")) return avatar;
+    if (avatar.startsWith("data:image/")) return avatar;
+    // Relative path from API (e.g., /uploads/avatars/..)
+    const trimmedBase = (baseUrl || "").replace(/\/$/, "");
+    return `${trimmedBase}${avatar.startsWith("/") ? "" : "/"}${avatar}`;
+  }, [user?.avatar, baseUrl]);
+
   const renderDropdownItem = useCallback(
     (item: MenuItem) => (
       <button
@@ -202,7 +213,7 @@ const Header = () => {
               aria-label="Profile menu"
             >
               <img
-                src="/profile.jpg"
+                src={profileImageSrc}
                 alt="User profile"
                 className="h-8 w-8 rounded-full border-2 border-gray-300 hover:border-orange-500 transition-colors object-cover"
                 onError={handleImageError}

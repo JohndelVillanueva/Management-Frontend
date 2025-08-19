@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import BaseModal from './BaseModal';
 
 interface Department {
   id: number;
@@ -15,12 +16,7 @@ interface HeadUser {
 interface CreateCardModalProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (
-    title: string, 
-    description: string, 
-    departmentId: number,
-    headId?: number | null  // Add this parameter
-  ) => Promise<boolean>;
+  onCreate: (title: string, description: string, departmentId: number, headId: number | null) => Promise<boolean>;
   loading: boolean;
   error: string;
 }
@@ -78,82 +74,27 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({ open, onClose, onCrea
 
   if (!open) return null;
 
-const handleCreate = async () => {
-  if (!title.trim() || !departmentId) return;
-  const success = await onCreate(
-    title, 
-    description, 
-    departmentId,
-    selectedHeadId  // Pass the selected headId
-  );
-  if (success) {
-    setTitle('');
-    setDescription('');
-    setDepartmentId(null);
-    setSelectedHeadId(null);
-    onClose();
-  }
-};
+  const handleCreate = async () => {
+    if (!title.trim() || !departmentId) return;
+    const success = await onCreate(title, description, departmentId, selectedHeadId);
+    if (success) {
+      setTitle('');
+      setDescription('');
+      setDepartmentId(null);
+      setSelectedHeadId(null);
+      onClose();
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-blur bg-opacity-50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
-        <h2 className="text-xl font-semibold mb-4">Create New Card</h2>
-        {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
-        {deptError && <div className="mb-4 text-red-600 text-sm">{deptError}</div>}
-        <label className="block mb-2 text-sm font-medium text-gray-700">Card Title</label>
-        <input
-          className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="Enter card title"
-          disabled={loading}
-        />
-        <label className="block mb-2 text-sm font-medium text-gray-700">Description</label>
-        <textarea
-          className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="Enter description"
-          disabled={loading}
-        />
-        <label className="block mb-2 text-sm font-medium text-gray-700">Department</label>
-        <select
-          className="w-full mb-2 px-3 py-2 border rounded focus:outline-none focus:ring"
-          value={departmentId ?? ''}
-          onChange={e => setDepartmentId(Number(e.target.value))}
-          disabled={loading || departments.length === 0}
-        >
-          <option value="">Select Department</option>
-          {departments.length === 0 ? (
-            <option>No departments found</option>
-          ) : (
-            departments.map((dept) => (
-              <option key={dept.id} value={dept.id}>{dept.name}</option>
-            ))
-          )}
-        </select>
-        {/* Head user dropdown */}
-        {headUsers.length > 0 && (
-          <>
-            <label className="block mb-2 text-sm font-medium text-gray-700">Department Head</label>
-            <select
-              className="w-full mb-2 px-3 py-2 border rounded focus:outline-none focus:ring"
-              value={selectedHeadId ?? ''}
-              onChange={e => setSelectedHeadId(Number(e.target.value))}
-              disabled={loading}
-            >
-              <option value="">Select Department Head</option>
-              {headUsers.map((head) => (
-                <option key={head.id} value={head.id}>
-                  {head.first_name} {head.last_name}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-        <div className="flex justify-end gap-2 mt-4">
+    <BaseModal
+      isOpen={open}
+      onClose={onClose}
+      title="Create New Card"
+      description="Define the card title, department, optional head, and description."
+      widthClassName="max-w-xl"
+      footer={(
+        <>
           <button
             className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
             onClick={onClose}
@@ -163,16 +104,75 @@ const handleCreate = async () => {
             Cancel
           </button>
           <button
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center min-w-[90px]"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center min-w-[90px] disabled:opacity-50"
             onClick={handleCreate}
             type="button"
             disabled={!title.trim() || !departmentId || !selectedHeadId || loading || departments.length === 0}
           >
             {loading ? 'Creating...' : 'Create'}
           </button>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    >
+      {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
+      {deptError && <div className="mb-4 text-red-600 text-sm">{deptError}</div>}
+      <label className="block mb-1 text-sm font-medium text-gray-700">Card Title</label>
+      <p className="text-xs text-gray-500 mb-2">Use a clear, concise name for this card.</p>
+      <input
+        className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
+        type="text"
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        placeholder="Enter card title"
+        disabled={loading}
+      />
+      <label className="block mb-1 text-sm font-medium text-gray-700">Description</label>
+      <p className="text-xs text-gray-500 mb-2">Describe the purpose or scope of this card (optional).</p>
+      <textarea
+        className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
+        value={description}
+        onChange={e => setDescription(e.target.value)}
+        placeholder="Enter description"
+        disabled={loading}
+      />
+      <label className="block mb-1 text-sm font-medium text-gray-700">Department</label>
+      <p className="text-xs text-gray-500 mb-2">Assign this card to a department.</p>
+      <select
+        className="w-full mb-2 px-3 py-2 border rounded focus:outline-none focus:ring"
+        value={departmentId ?? ''}
+        onChange={e => setDepartmentId(Number(e.target.value))}
+        disabled={loading || departments.length === 0}
+      >
+        <option value="">Select Department</option>
+        {departments.length === 0 ? (
+          <option>No departments found</option>
+        ) : (
+          departments.map((dept) => (
+            <option key={dept.id} value={dept.id}>{dept.name}</option>
+          ))
+        )}
+      </select>
+      {/* Head user dropdown */}
+      {headUsers.length > 0 && (
+        <>
+          <label className="block mb-1 text-sm font-medium text-gray-700">Department Head</label>
+          <p className="text-xs text-gray-500 mb-2">Optional: designate a head for this card.</p>
+          <select
+            className="w-full mb-2 px-3 py-2 border rounded focus:outline-none focus:ring"
+            value={selectedHeadId ?? ''}
+            onChange={e => setSelectedHeadId(Number(e.target.value))}
+            disabled={loading}
+          >
+            <option value="">Select Department Head</option>
+            {headUsers.map((head) => (
+              <option key={head.id} value={head.id}>
+                {head.first_name} {head.last_name}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+    </BaseModal>
   );
 };
 

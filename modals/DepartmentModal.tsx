@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import BaseModal from './BaseModal';
 
 interface Department {
   id: number;
@@ -72,79 +73,76 @@ const DepartmentModal: React.FC<DepartmentModalProps> = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-blur bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            {editingDepartment ? 'Edit Department' : 'Create Department'}
-          </h2>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department Name *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="Enter department name"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department Code *
-              </label>
-              <input
-                type="text"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="Enter department code (e.g., CS, IT, ENG)"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="Enter department description (optional)"
-                rows={3}
-                disabled={loading}
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
-                disabled={loading}
-              >
-                {loading ? 'Saving...' : (editingDepartment ? 'Update' : 'Create')}
-              </button>
-            </div>
-          </form>
+    <BaseModal
+      isOpen={open}
+      onClose={handleClose}
+      title={editingDepartment ? 'Edit Department' : 'Create Department'}
+      description={editingDepartment ? 'Update department info and code.' : 'Add a new department to the system.'}
+      widthClassName=""
+      containerClassName="w-[24rem] md:w-[36rem] aspect-square"
+      contentClassName="px-6 pt-3 pb-3 flex-1"
+      footer={(
+        <>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="department-form"
+            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : (editingDepartment ? 'Update' : 'Create')}
+          </button>
+        </>
+      )}
+    >
+      <form id="department-form" onSubmit={handleSubmit}>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Department Name *</label>
+          <p className="text-xs text-gray-500 mb-2">Provide a unique, descriptive name.</p>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            placeholder="Enter department name"
+            required
+            disabled={loading}
+          />
         </div>
-      </div>
-    </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Department Code *</label>
+          <p className="text-xs text-gray-500 mb-2">Used for quick references (e.g., CS, IT, ENG).</p>
+          <input
+            type="text"
+            value={formData.code}
+            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            placeholder="Enter department code"
+            required
+            disabled={loading}
+          />
+        </div>
+        <div className="mb-0">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <p className="text-xs text-gray-500 mb-2">Optional: add details that help identify this department.</p>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            placeholder="Enter description (optional)"
+            rows={3}
+            disabled={loading}
+          />
+        </div>
+      </form>
+    </BaseModal>
   );
 };
 

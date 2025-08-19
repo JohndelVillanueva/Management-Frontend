@@ -26,6 +26,7 @@ export default function SignupPage() {
     firstName: "",
     lastName: "",
     department: "",
+    avatar: "" as string | undefined,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -93,6 +94,24 @@ export default function SignupPage() {
     setError("");
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setFormData((prev) => ({ ...prev, avatar: undefined }));
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setFormData((prev) => ({ ...prev, avatar: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const validateForm = () => {
     if (!userType) {
       setError("Please select your role");
@@ -135,6 +154,7 @@ export default function SignupPage() {
       confirmPassword: formData.confirmPassword,
       department: userType === "ADMIN" ? null : formData.department,
       userType: userType?.toUpperCase(),
+      avatar: formData.avatar,
     };
     
     console.log("Sending signup data:", requestData);
@@ -299,6 +319,32 @@ export default function SignupPage() {
           )}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* Avatar Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Profile Picture (optional)
+              </label>
+              <div className="flex items-center space-x-4">
+                <div className="h-16 w-16 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center border">
+                  {formData.avatar ? (
+                    <img src={formData.avatar} alt="Avatar preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <svg className="h-8 w-8 text-gray-300" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-3.31 0-6 2.69-6 6h2a4 4 0 1 1 8 0h2c0-3.31-2.69-6-6-6z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="block text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">PNG, JPG up to ~2MB.</p>
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* First Name Field */}
               <div>

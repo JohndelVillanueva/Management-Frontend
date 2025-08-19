@@ -20,16 +20,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Auto-login effect: check token from storage, verify it, set user
   useEffect(() => {
+    console.log("AuthContext: useEffect running");
     const verifyToken = async () => {
       const storedToken =
         localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+      const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
 
       if (!storedToken) {
+        console.log("AuthContext: No stored token found.");
         setLoading(false);
         return;
       }
 
       try {
+        console.log("AuthContext: Verifying token with backend.");
         const response = await fetch(`${baseUrl}/auth/me`, {
           headers: { Authorization: `Bearer ${storedToken}` },
         });
@@ -37,27 +41,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!response.ok) throw new Error("Failed to verify token");
 
         const data = await response.json();
+        console.log("AuthContext: Token verification response data:", data);
 
         if (data.user) {
           setToken(storedToken);
-          setUser(data.user);
+          setUser({
+            ...data.user,
+            department: data.user.department || null,
+          });
+          console.log("AuthContext: User set:", data.user);
           // Redirect if currently on login page
           if (window.location.pathname === "/login") {
             redirectUser(data.user.user_type);
           }
+        } else if (storedUser) {
+          // Fallback to stored user data if API doesn't return user
+          console.log("AuthContext: Using stored user data");
+          setUser(JSON.parse(storedUser));
         } else {
+          console.log("AuthContext: No user data available.");
           clearAuth();
         }
       } catch (error) {
-        console.error("Token verification failed:", error);
+        console.error("AuthContext: Token verification failed:", error);
         clearAuth();
       } finally {
         setLoading(false);
+        console.log("AuthContext: Loading set to false.");
       }
     };
 
     verifyToken();
-  }, []);
+  }, [baseUrl, navigate]);
 
   const redirectUser = (userType: string) => {
     switch (userType) {
@@ -76,24 +91,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = (newToken: string, userData: any, rememberMe: boolean) => {
-    if (rememberMe) {
-      localStorage.setItem("authToken", newToken);
-      localStorage.setItem("user", JSON.stringify(userData));
-    } else {
-      sessionStorage.setItem("authToken", newToken);
-      sessionStorage.setItem("user", JSON.stringify(userData));
-    }
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem("authToken", newToken);
+    storage.setItem("user", JSON.stringify(userData));
+    
     setToken(newToken);
-    setUser(userData);
+    setUser({
+      ...userData,
+      department: userData.department || null,
+    });
+    console.log("AuthContext: User logged in, data:", userData);
     redirectUser(userData.user_type);
   };
 
   const logout = () => {
+    console.log("AuthContext: Logging out.");
     clearAuth();
     navigate("/login");
   };
 
   const clearAuth = () => {
+    console.log("AuthContext: Clearing auth data.");
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     sessionStorage.removeItem("authToken");

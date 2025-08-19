@@ -26,7 +26,7 @@ const SubmissionDetails = () => {
         const submissionData = await submissionRes.json();
         setSubmission(submissionData);
 
-        // Fetch files for this card
+        // Fetch files for this card (by cardId)
         const filesRes = await fetch(`http://localhost:3000/submission/${submissionData.card.id}/files`);
         if (filesRes.ok) {
           const filesData = await filesRes.json();
@@ -73,6 +73,7 @@ const SubmissionDetails = () => {
       if (submission?.card?.department?.id) {
         formData.append("departmentId", submission.card.department.id);
       }
+      // Do not tie to specific submission; show files by cardId
 
       const response = await fetch(
         `http://localhost:3000/submission/${submission.card.id}`,
@@ -91,7 +92,7 @@ const SubmissionDetails = () => {
         throw new Error(result.error || result.message || "Upload failed");
       }
 
-      // Refresh files data
+      // Refresh files data for this card
       const filesRes = await fetch(`http://localhost:3000/submission/${submission.card.id}/files`);
       if (filesRes.ok) {
         const filesData = await filesRes.json();

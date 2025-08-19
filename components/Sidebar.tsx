@@ -26,47 +26,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [cards, setCards] = useState<any[]>([]);
-  const [loadingCards, setLoadingCards] = useState(false);
 
   useEffect(() => {
-    const fetchCards = async () => {
-      setLoadingCards(true);
-      try {
-        let url = 'http://localhost:3000/cards?timestamp=' + new Date().getTime();
-        
-        if (user?.user_type === 'HEAD') {
-          url += `&headId=${user.id}`;
-        } else if (user?.user_type === 'STAFF' && user.departmentId) {
-          url += `&departmentId=${user.departmentId}`;
-        }
-        
-        const res = await fetch(url, {
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
-        });
-        if (!res.ok) throw new Error('Failed to fetch cards');
-        const data = await res.json();
-        
-        // Store cards in localStorage for persistence
-        localStorage.setItem('departmentCards', JSON.stringify(data));
-        setCards(data);
-      } catch (error) {
-        console.error('Error fetching cards:', error);
-        // Fallback to localStorage if API fails
-        const cachedCards = localStorage.getItem('departmentCards');
-        if (cachedCards) {
-          setCards(JSON.parse(cachedCards));
-        } else {
-          setCards([]);
-        }
-      } finally {
-        setLoadingCards(false);
-      }
-    };
-
-    if (user?.user_type === 'HEAD' || user?.user_type === 'STAFF') {
-      fetchCards();
+    // Only fetch cards for ADMIN or HEAD
+    if (user?.user_type === 'ADMIN' || user?.user_type === 'HEAD') {
+      fetch('http://localhost:3000/cards')
+        .then(res => res.json())
+        .then(data => setCards(data))
+        .catch(() => setCards([]));
     }
   }, [user]);
 
@@ -78,18 +45,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         path: getDashboardPath(),
         active: location.pathname === getDashboardPath(),
       },
-    ];
-  
-    // Show Card Management only for HEAD users, not for ADMIN or STAFF
-    if (user?.user_type === 'HEAD') {
-      baseItems.push({
-        name: 'Card Management',
+      {
+        name: 'Cards',
         icon: FolderIcon,
         path: '/cards',
-        active: location.pathname.startsWith('/cards'),
-      });
-    }
-  
+        active: location.pathname === '/cards',
+      },
+    ];
+
+    // Add admin-specific items
     if (user?.user_type === 'ADMIN') {
       baseItems.push(
         {
@@ -112,7 +76,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         }
       );
     }
-  
+
+    // Add head-specific items
     if (user?.user_type === 'HEAD') {
       baseItems.push(
         {
@@ -129,7 +94,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         }
       );
     }
-  
+
+    // Add staff-specific items
     if (user?.user_type === 'STAFF') {
       baseItems.push(
         {
@@ -140,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         }
       );
     }
-  
+
     return baseItems;
   };
 
@@ -155,53 +121,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
       default:
         return '/dashboard';
     }
-  };
-
-  const renderCardsSection = () => {
-    if (user?.user_type === 'ADMIN') return null;
-
-    if (loadingCards) {
-      return (
-        <div className="px-3 py-2 flex items-center">
-          <span className="text-gray-500 text-sm">Loading cards...</span>
-        </div>
-      );
-    }
-
-    if (cards.length === 0) return null;
-
-    return (
-      <div className="mt-4">
-        <div className={`flex items-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider ${
-          isOpen ? 'mb-2' : 'justify-center'
-        }`}>
-          {isOpen ? 'Quick Access' : <FolderIcon className="h-5 w-5" />}
-        </div>
-        <ul className="space-y-1">
-          {cards.slice(0, 2).map((card) => (
-            <li key={card.id}>
-              <button
-                onClick={() => navigate(`/CardDetails/${card.id}`)}
-                className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors ${
-                  location.pathname === `/CardDetails/${card.id}`
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <FolderIcon className="h-5 w-5 flex-shrink-0" />
-                {isOpen && (
-                  <span className="ml-3 text-sm font-medium truncate">
-                    {card.title.length > 15 
-                      ? `${card.title.substring(0, 15)}...` 
-                      : card.title}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
   };
 
   const handleLogout = () => {
@@ -257,27 +176,48 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
       {/* Navigation */}
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
-          {navItems.map((item) => (
-            <li key={item.name}>
-              <button
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors ${
-                  item.active
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {isOpen && (
-                  <div className="ml-3 flex-1 flex justify-between items-center">
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </div>
-                )}
-              </button>
-            </li>
+          {navItems.map((item, idx) => (
+            <React.Fragment key={item.name}>
+              <li>
+                <button
+                  onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors ${
+                    item.active
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {isOpen && <span className="ml-3 text-sm font-medium">{item.name}</span>}
+                </button>
+              </li>
+              {/* Insert cards after Reports */}
+              {item.name === 'Reports' && cards.length > 0 && (
+                cards
+                  .filter(card => {
+                    if (user?.user_type === 'HEAD') {
+                      return card.department?.id === user?.departmentId || card.headId === user?.id;
+                    }
+                    if (user?.user_type === 'ADMIN') {
+                      return true; // Admins see all; adjust if needed
+                    }
+                    return false;
+                  })
+                  .map(card => (
+                  <li key={card.id}>
+                    <button
+                      onClick={() => navigate(`/CardDetails/${card.id}`)}
+                      className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100`}
+                    >
+                      <FolderIcon className="h-5 w-5 flex-shrink-0" />
+                      {isOpen && <span className="ml-3 text-sm font-medium">{card.title}</span>}
+                    </button>
+                  </li>
+                ))
+              )}
+            </React.Fragment>
           ))}
         </ul>
-        {renderCardsSection()}
       </nav>
 
       {/* Footer - Logout Button */}
@@ -294,4 +234,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   );
 };
 
-export default Sidebar;
+export default Sidebar; 
