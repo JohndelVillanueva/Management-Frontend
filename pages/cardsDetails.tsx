@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowUpTrayIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { 
+  ArrowUpTrayIcon, 
+  ArrowLeftIcon, 
+  EyeIcon, 
+  DocumentArrowDownIcon,
+  TrashIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
+  ChevronUpIcon,
+  ChevronDownIcon
+} from "@heroicons/react/24/outline";
 import UploadFileModal from "../modals/UploadFileModal";
 
 const CardDetails = () => {
@@ -21,7 +31,9 @@ const CardDetails = () => {
   // Filters and sorting
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"recent" | "name" | "size">("recent");
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "size" | "owner">("recent");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [showFilters, setShowFilters] = useState(false);
 
   console.log("Component rendering...");
 
@@ -68,7 +80,7 @@ const CardDetails = () => {
       }
 
       const response = await fetch(`http://localhost:3000/submission/${id}`,
-        { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }, body: formData }
+        { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("authToken") || sessionStorage.getItem("authToken")}` }, body: formData }
       );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || result.message || "Upload failed");
@@ -111,9 +123,21 @@ const CardDetails = () => {
     return Array.from(set).sort();
   }, [files]);
 
+  // Handle sorting
+  const handleSort = (column: "recent" | "name" | "size" | "owner") => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection("asc");
+    }
+  };
+
   // Filtered and sorted files
   const filteredFiles = useMemo(() => {
     let list = files.slice();
+    
+    // Apply search filter
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter((f) => {
@@ -123,19 +147,39 @@ const CardDetails = () => {
         return name.includes(q) || type.includes(q) || owner.includes(q);
       });
     }
+    
+    // Apply type filter
     if (typeFilter !== "all") {
       list = list.filter((f) => String(f?.type || "") === typeFilter);
     }
-    if (sortBy === "name") {
-      list.sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
-    } else if (sortBy === "size") {
-      list.sort((a, b) => (b?.size || 0) - (a?.size || 0));
-    } else {
-      // recent by updatedAt desc
-      list.sort((a, b) => new Date(b?.updatedAt || 0).getTime() - new Date(a?.updatedAt || 0).getTime());
-    }
+    
+    // Apply sorting
+    list.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case "name":
+          comparison = String(a?.name || "").localeCompare(String(b?.name || ""));
+          break;
+        case "size":
+          comparison = (a?.size || 0) - (b?.size || 0);
+          break;
+        case "owner":
+          const ownerA = `${a?.user?.first_name || ""} ${a?.user?.last_name || ""}`;
+          const ownerB = `${b?.user?.first_name || ""} ${b?.user?.last_name || ""}`;
+          comparison = ownerA.localeCompare(ownerB);
+          break;
+        case "recent":
+        default:
+          comparison = new Date(a?.updatedAt || 0).getTime() - new Date(b?.updatedAt || 0).getTime();
+          break;
+      }
+      
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+    
     return list;
-  }, [files, query, typeFilter, sortBy]);
+  }, [files, query, typeFilter, sortBy, sortDirection]);
 
   return (
     <div className="flex bg-gray-100 h-screen w-full p-0 m-0 flex flex-col">
@@ -169,135 +213,274 @@ const CardDetails = () => {
       </div>
 
       {/* Controls */}
-      <div className="px-6 mb-2">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <input
-            type="text"
-            placeholder="Search files..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full md:w-72 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring"
-          />
-          <div className="flex gap-3">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2"
-            >
-              <option value="all">All Types</option>
-              {typeOptions.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="border border-gray-300 rounded px-3 py-2"
-            >
-              <option value="recent">Most Recent</option>
-              <option value="name">Name (A-Z)</option>
-              <option value="size">Size (Largest)</option>
-            </select>
+      <div className="px-6 mb-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search files, types, or owners..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+            
+            {/* Filter Toggle */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                  showFilters 
+                    ? 'bg-orange-50 border-orange-200 text-orange-700' 
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <FunnelIcon className="h-4 w-4" />
+                Filters
+              </button>
+              
+              {/* Quick Actions */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  {filteredFiles.length} of {files.length} files
+                </span>
+              </div>
+            </div>
           </div>
+          
+          {/* Expanded Filters */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Type:</label>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="all">All Types</option>
+                    {typeOptions.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Sort by:</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="recent">Most Recent</option>
+                    <option value="name">Name (A-Z)</option>
+                    <option value="size">Size (Largest)</option>
+                    <option value="owner">Owner (A-Z)</option>
+                  </select>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setQuery("");
+                    setTypeFilter("all");
+                    setSortBy("recent");
+                    setSortDirection("desc");
+                  }}
+                  className="text-sm text-orange-600 hover:text-orange-800 font-medium"
+                >
+                  Clear all
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* File list */}
-      <div className="p-6">
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr className="text-left text-sm font-medium text-gray-500">
-                  <th className="px-6 py-3">
-                    <div className="flex items-center">
-                      <span>Name</span>
-                      <svg className="ml-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3">Owner</th>
-                  <th className="px-6 py-3">
-                    <div className="flex items-center">
-                      <span>Last modified</span>
-                      <svg className="ml-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3">File size</th>
-                  <th className="px-6 py-3 w-12"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredFiles.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      <div className="flex flex-col items-center">
-                        <div className="text-4xl mb-4">📁</div>
-                        <p className="text-lg font-medium">No files uploaded yet</p>
-                        <p className="text-sm">Upload your first file to get started</p>
+      <div className="px-6 pb-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {/* Table Header */}
+          <div className="bg-gray-50 border-b border-gray-200">
+            <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="col-span-5">
+                <button
+                  onClick={() => handleSort("name")}
+                  className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+                >
+                  <span>Name</span>
+                  {sortBy === "name" ? (
+                    sortDirection === "asc" ? (
+                      <ChevronUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ChevronDownIcon className="h-4 w-4" />
+                    )
+                  ) : (
+                    <div className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <div className="col-span-2">
+                <button
+                  onClick={() => handleSort("owner")}
+                  className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+                >
+                  <span>Owner</span>
+                  {sortBy === "owner" ? (
+                    sortDirection === "asc" ? (
+                      <ChevronUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ChevronDownIcon className="h-4 w-4" />
+                    )
+                  ) : (
+                    <div className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <div className="col-span-2">
+                <button
+                  onClick={() => handleSort("recent")}
+                  className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+                >
+                  <span>Modified</span>
+                  {sortBy === "recent" ? (
+                    sortDirection === "asc" ? (
+                      <ChevronUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ChevronDownIcon className="h-4 w-4" />
+                    )
+                  ) : (
+                    <div className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <div className="col-span-2">
+                <button
+                  onClick={() => handleSort("size")}
+                  className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+                >
+                  <span>Size</span>
+                  {sortBy === "size" ? (
+                    sortDirection === "asc" ? (
+                      <ChevronUpIcon className="h-4 w-4" />
+                    ) : (
+                      <ChevronDownIcon className="h-4 w-4" />
+                    )
+                  ) : (
+                    <div className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <div className="col-span-1 text-center">Actions</div>
+            </div>
+          </div>
+
+          {/* Table Body */}
+          <div className="divide-y divide-gray-200">
+            {loading ? (
+              <div className="px-6 py-12 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading files...</p>
+              </div>
+            ) : filteredFiles.length === 0 ? (
+              <div className="px-6 py-12 text-center text-gray-500">
+                <div className="flex flex-col items-center">
+                  <div className="text-6xl mb-4">📁</div>
+                  <p className="text-lg font-medium mb-2">
+                    {query || typeFilter !== "all" ? "No files match your filters" : "No files uploaded yet"}
+                  </p>
+                  <p className="text-sm">
+                    {query || typeFilter !== "all" 
+                      ? "Try adjusting your search or filters" 
+                      : "Upload your first file to get started"
+                    }
+                  </p>
+                </div>
+              </div>
+            ) : (
+              filteredFiles.map((file) => (
+                <div key={file.id} className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+                  {/* File Name & Type */}
+                  <div className="col-span-5 flex items-center">
+                    <div className="flex items-center min-w-0 flex-1">
+                      <span className="text-2xl mr-3 flex-shrink-0">
+                        {getFileIcon(file.name, file.type)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {file.name}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {file.type}
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredFiles.map((file) => (
-                    <tr key={file.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <span className="text-xl mr-3">
-                            {getFileIcon(file.name, file.type)}
-                          </span>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {file.name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {file.type}
-                            </div>
-                          </div>
+                    </div>
+                  </div>
+
+                  {/* Owner */}
+                  <div className="col-span-2 flex items-center">
+                    <div className="flex items-center min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-xs font-medium text-white mr-3 flex-shrink-0">
+                        {file.user?.first_name?.charAt(0) || 'U'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-900 truncate">
+                          {file.user ? `${file.user.first_name} ${file.user.last_name}` : 'Unknown'}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-xs text-white mr-2">
-                            {file.user?.first_name?.charAt(0) || 'U'}
-                          </div>
-                          <span className="text-sm text-gray-900">
-                            {file.user ? `${file.user.first_name} ${file.user.last_name}` : 'Unknown'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {new Date(file.updatedAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {file.size ? formatFileSize(file.size) : '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          {file.path && (
-                            <a
-                              href={`http://localhost:3000${file.path}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download
-                              className="text-orange-600 hover:text-orange-800 p-1 rounded hover:bg-orange-50"
-                              title="Download"
-                            >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modified Date */}
+                  <div className="col-span-2 flex items-center">
+                    <div className="text-sm text-gray-900">
+                      {new Date(file.updatedAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+
+                  {/* File Size */}
+                  <div className="col-span-2 flex items-center">
+                    <div className="text-sm text-gray-900">
+                      {file.size ? formatFileSize(file.size) : '—'}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="col-span-1 flex items-center justify-center">
+                    <div className="flex items-center space-x-1">
+                      {file.path && (
+                        <>
+                          <a
+                            href={`http://localhost:3000${file.path}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="View file"
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </a>
+                          <a
+                            href={`http://localhost:3000${file.path}`}
+                            download
+                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Download file"
+                          >
+                            <DocumentArrowDownIcon className="h-4 w-4" />
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

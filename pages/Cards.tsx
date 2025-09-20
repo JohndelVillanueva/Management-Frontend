@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import CreateCardModal from '../modals/CreateCardModal'; // Import the modal
 
 type CardItem = {
   id: number;
@@ -19,43 +21,79 @@ const CardsPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'title'>('recent');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const fetchCards = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      let url = 'http://localhost:3000/cards';
+
+      // Build query params similar to the sidebar filtering
+      if (user?.user_type === 'HEAD') {
+        const departmentId = (user as any).department?.id ?? (user as any).departmentId;
+        const params = new URLSearchParams();
+        params.set('userId', String((user as any).id));
+        if (departmentId) params.set('departmentId', String(departmentId));
+        url += `?${params.toString()}`;
+      } else if (user?.user_type === 'STAFF') {
+        const departmentId = (user as any)?.department?.id ?? (user as any)?.departmentId;
+        if (departmentId) {
+          const params = new URLSearchParams();
+          params.set('departmentId', String(departmentId));
+          url += `?${params.toString()}`;
+        }
+      }
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch cards');
+      const data = await res.json();
+      setCards(data);
+    } catch (err: any) {
+      setError(err.message || 'Error loading cards');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCards = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        let url = 'http://localhost:3000/cards';
-
-        // Build query params similar to the sidebar filtering
-        if (user?.user_type === 'HEAD') {
-          const departmentId = (user as any).department?.id ?? (user as any).departmentId;
-          const params = new URLSearchParams();
-          params.set('userId', String((user as any).id));
-          if (departmentId) params.set('departmentId', String(departmentId));
-          url += `?${params.toString()}`;
-        } else if (user?.user_type === 'STAFF') {
-          const departmentId = (user as any)?.department?.id ?? (user as any)?.departmentId;
-          if (departmentId) {
-            const params = new URLSearchParams();
-            params.set('departmentId', String(departmentId));
-            url += `?${params.toString()}`;
-          }
-        }
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Failed to fetch cards');
-        const data = await res.json();
-        setCards(data);
-      } catch (err: any) {
-        setError(err.message || 'Error loading cards');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCards();
   }, [user]);
+
+  const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null) => {
+    setCreateLoading(true);
+    setCreateError('');
+    try {
+      const response = await fetch('http://localhost:3000/cards', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          departmentId,
+          headId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create card');
+      }
+
+      // Refresh the cards list
+      await fetchCards();
+      return true;
+    } catch (err: any) {
+      setCreateError(err.message || 'Error creating card');
+      return false;
+    } finally {
+      setCreateLoading(false);
+    }
+  };
 
   const departmentOptions = useMemo(() => {
     const set = new Set<string>();
@@ -98,6 +136,13 @@ const CardsPage: React.FC = () => {
         <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold text-gray-800">Cards</h1>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            {/* <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Create Card
+            </button> */}
             <input
               type="text"
               placeholder="Search cards..."
@@ -128,9 +173,27 @@ const CardsPage: React.FC = () => {
 
         {/* Card Grid */}
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No cards available.</div>
+          <div className="text-center py-12 text-gray-500">
+            No cards available.
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors mx-auto"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Create Your First Card
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {/* Create Card Button as the first card */}
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="text-left bg-white rounded-xl shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transform transition border-2 border-dashed border-gray-300 group flex flex-col items-center justify-center min-h-[180px] text-gray-500 hover:text-orange-600 hover:border-orange-400"
+            >
+              <PlusIcon className="h-12 w-12 mb-3 text-gray-400 group-hover:text-orange-500" />
+              <span className="font-medium">Create New Card</span>
+            </button>
+
             {filtered.map((card) => (
               <button
                 key={card.id}
@@ -154,6 +217,15 @@ const CardsPage: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* Create Card Modal */}
+        <CreateCardModal
+          open={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={handleCreateCard}
+          loading={createLoading}
+          error={createError}
+        />
       </div>
     </div>
   );

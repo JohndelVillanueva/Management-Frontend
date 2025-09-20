@@ -40,7 +40,7 @@ const Departments = () => {
       setLoading(true);
       const response = await fetch('http://localhost:3000/departments', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
         }
       });
 
@@ -76,7 +76,7 @@ const Departments = () => {
       const response = await fetch(`http://localhost:3000/departments/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
         }
       });
 
@@ -104,7 +104,7 @@ const Departments = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
         },
         body: JSON.stringify(formData)
       });

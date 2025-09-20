@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FaUsers } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext";
 
 interface User {
   id: number;
@@ -36,15 +37,25 @@ const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
         const res = await fetch("http://localhost:3000/users", {
-          credentials: "include",
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
         if (!res.ok) throw new Error("Failed to fetch users");
-        setUsers(await res.json());
+        const userData = await res.json();
+        console.log("UsersPage - Fetched users:", {
+          totalUsers: userData.length,
+          userTypes: userData.map((u: any) => ({ id: u.id, user_type: u.user_type, department: u.department?.name })),
+          currentUser: user
+        });
+        setUsers(userData);
       } catch {
         setError("Error loading users.");
       } finally {
@@ -66,9 +77,20 @@ const UsersPage: React.FC = () => {
   };
 
   const renderSection = (title: string, type: string) => {
-    const filtered = users.filter(
-      (user) => user.user_type.toLowerCase() === type.toLowerCase()
-    );
+    const filtered = users.filter((user) => {
+      const userType = user.user_type.toLowerCase();
+      const targetType = type.toLowerCase();
+      
+      // Handle both old and new enum values
+      if (targetType === 'admin') {
+        return userType === 'admin';
+      } else if (targetType === 'head') {
+        return userType === 'head' || userType === 'departmenthead';
+      } else if (targetType === 'staff') {
+        return userType === 'staff';
+      }
+      return userType === targetType;
+    });
 
     if (filtered.length === 0) return null;
 
@@ -111,6 +133,23 @@ const UsersPage: React.FC = () => {
 
   if (loading) return <p className="p-4 text-gray-600">Loading users...</p>;
   if (error) return <p className="p-4 text-red-500">{error}</p>;
+
+  // Show different content for HEAD users
+  if (user?.user_type === 'HEAD' || user?.user_type === 'DepartmentHead') {
+    return (
+      <div className="p-6">
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-6">
+          <h3 className="font-medium">Staff Management</h3>
+          <p className="text-sm mt-1">
+            As a department head, you can manage your staff members through the dedicated Staff Management page.
+            The users shown here are filtered to show only staff from your department.
+          </p>
+        </div>
+        <h1 className="text-2xl font-semibold text-gray-800 mb-6">Your Department Staff</h1>
+        {renderSection("Staff", "STAFF")}
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     ];
 
     // Add admin-specific items
-    if (user?.user_type === 'ADMIN') {
+    if (user?.user_type === 'ADMIN' || user?.user_type === 'Admin') {
       baseItems.push(
         {
           name: 'Users',
@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     }
 
     // Add head-specific items
-    if (user?.user_type === 'HEAD') {
+    if (user?.user_type === 'HEAD' || user?.user_type === 'DepartmentHead') {
       baseItems.push(
         {
           name: 'Staff Management',

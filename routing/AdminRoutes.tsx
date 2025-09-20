@@ -15,6 +15,7 @@ import SubmissionDetails from "../pages/SubmissionDetails"; // Ensure the path i
 import Departments from "../pages/Departments";
 import UsersPage from "../pages/usersPage";
 import Analytics from "../pages/Analytics.js";
+import StaffManagement from "../pages/StaffManagement";
 
 export default function routes() {
   return (
@@ -74,6 +75,14 @@ export default function routes() {
               element={
                 <ProtectedRoute>
                   <Departments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/staff"
+              element={
+                <ProtectedRoute>
+                  <StaffManagement />
                 </ProtectedRoute>
               }
             />

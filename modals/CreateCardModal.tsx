@@ -19,9 +19,10 @@ interface CreateCardModalProps {
   onCreate: (title: string, description: string, departmentId: number, headId: number | null) => Promise<boolean>;
   loading: boolean;
   error: string;
+  user_type: 'ADMIN' | 'HEAD'; // Add this line
 }
 
-const CreateCardModal: React.FC<CreateCardModalProps> = ({ open, onClose, onCreate, loading, error }) => {
+const CreateCardModal: React.FC<CreateCardModalProps> = ({ open, onClose, onCreate, loading, error, user_type }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -107,7 +108,11 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({ open, onClose, onCrea
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center min-w-[90px] disabled:opacity-50"
             onClick={handleCreate}
             type="button"
-            disabled={!title.trim() || !departmentId || !selectedHeadId || loading || departments.length === 0}
+            disabled={
+              user_type === 'ADMIN'
+                ? (!title.trim() || !departmentId || !selectedHeadId || loading || departments.length === 0)
+                : (!title.trim() || loading)
+            }
           >
             {loading ? 'Creating...' : 'Create'}
           </button>
@@ -135,45 +140,49 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({ open, onClose, onCrea
         placeholder="Enter description"
         disabled={loading}
       />
-      <label className="block mb-1 text-sm font-medium text-gray-700">Department</label>
-      <p className="text-xs text-gray-500 mb-2">Assign this card to a department.</p>
-      <select
-        className="w-full mb-2 px-3 py-2 border rounded focus:outline-none focus:ring"
-        value={departmentId ?? ''}
-        onChange={e => setDepartmentId(Number(e.target.value))}
-        disabled={loading || departments.length === 0}
-      >
-        <option value="">Select Department</option>
-        {departments.length === 0 ? (
-          <option>No departments found</option>
-        ) : (
-          departments.map((dept) => (
-            <option key={dept.id} value={dept.id}>{dept.name}</option>
-          ))
-        )}
-      </select>
-      {/* Head user dropdown */}
-      {headUsers.length > 0 && (
+      {user_type === 'ADMIN' && (
         <>
-          <label className="block mb-1 text-sm font-medium text-gray-700">Department Head</label>
-          <p className="text-xs text-gray-500 mb-2">Optional: designate a head for this card.</p>
+          <label className="block mb-1 text-sm font-medium text-gray-700">Department</label>
+          <p className="text-xs text-gray-500 mb-2">Assign this card to a department.</p>
           <select
             className="w-full mb-2 px-3 py-2 border rounded focus:outline-none focus:ring"
-            value={selectedHeadId ?? ''}
-            onChange={e => setSelectedHeadId(Number(e.target.value))}
-            disabled={loading}
+            value={departmentId ?? ''}
+            onChange={e => setDepartmentId(Number(e.target.value))}
+            disabled={loading || departments.length === 0}
           >
-            <option value="">Select Department Head</option>
-            {headUsers.map((head) => (
-              <option key={head.id} value={head.id}>
-                {head.first_name} {head.last_name}
-              </option>
-            ))}
+            <option value="">Select Department</option>
+            {departments.length === 0 ? (
+              <option>No departments found</option>
+            ) : (
+              departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))
+            )}
           </select>
+          {/* Head user dropdown */}
+          {headUsers.length > 0 && (
+            <>
+              <label className="block mb-1 text-sm font-medium text-gray-700">Department Head</label>
+              <p className="text-xs text-gray-500 mb-2">Optional: designate a head for this card.</p>
+              <select
+                className="w-full mb-2 px-3 py-2 border rounded focus:outline-none focus:ring"
+                value={selectedHeadId ?? ''}
+                onChange={e => setSelectedHeadId(Number(e.target.value))}
+                disabled={loading}
+              >
+                <option value="">Select Department Head</option>
+                {headUsers.map((head) => (
+                  <option key={head.id} value={head.id}>
+                    {head.first_name} {head.last_name}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </>
       )}
     </BaseModal>
   );
 };
 
-export default CreateCardModal; 
+export default CreateCardModal;
