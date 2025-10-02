@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PlusIcon } from '@heroicons/react/24/outline';
-import CreateCardModal from '../modals/CreateCardModal'; // Import the modal
+import CreateCardModal from '../modals/CreateCardModal';
 
 type CardItem = {
   id: number;
@@ -14,7 +14,7 @@ type CardItem = {
 
 const CardsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuth(); // This is currentUser from your context
   const [cards, setCards] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,38 +62,79 @@ const CardsPage: React.FC = () => {
     fetchCards();
   }, [user]);
 
-  const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null) => {
-    setCreateLoading(true);
-    setCreateError('');
-    try {
-      const response = await fetch('http://localhost:3000/cards', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          description,
-          departmentId,
-          headId
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create card');
-      }
-
-      // Refresh the cards list
-      await fetchCards();
-      return true;
-    } catch (err: any) {
-      setCreateError(err.message || 'Error creating card');
-      return false;
-    } finally {
+const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null, expiresAt: Date | null) => {
+  setCreateLoading(true);
+  setCreateError('');
+  
+  try {
+    // Get the token from localStorage
+    const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token);
+    
+    if (!token) {
+      setCreateError('No authentication token found. Please log in again.');
       setCreateLoading(false);
+      return false;
     }
-  };
+
+    // Decode the token to see what's in it (client-side)
+    try {
+      const decoded = JSON.parse(atob(token.split('.')[1]));
+      console.log('Decoded token payload:', decoded);
+    } catch (e) {
+      console.log('Could not decode token:', e);
+    }
+
+    const requestBody: any = {
+      title,
+      description,
+      departmentId,
+    };
+
+    if (headId) requestBody.headId = headId;
+    if (expiresAt) requestBody.expiresAt = expiresAt.toISOString();
+
+    console.log('Sending request with headers:', {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    });
+
+    const response = await fetch('http://localhost:3000/cards', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log('Response status:', response.status);
+    
+    if (response.ok) {
+      const createdCard = await response.json();
+      console.log('Created card:', createdCard);
+      await fetchCards();
+      setCreateLoading(false);
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.error('Error response text:', errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        setCreateError(errorData.error || 'Failed to create card');
+      } catch {
+        setCreateError('Failed to create card');
+      }
+      setCreateLoading(false);
+      return false;
+    }
+  } catch (error) {
+    console.error('Network error:', error);
+    setCreateError('Network error occurred');
+    setCreateLoading(false);
+    return false;
+  }
+};
 
   const departmentOptions = useMemo(() => {
     const set = new Set<string>();
@@ -126,6 +167,12 @@ const CardsPage: React.FC = () => {
     return list;
   }, [cards, query, deptFilter, sortBy]);
 
+  // Get user's department ID for HEAD users
+  const getUserDepartmentId = () => {
+    if (!user) return undefined;
+    return (user as any).department?.id ?? (user as any).departmentId;
+  };
+
   if (loading) return <div className="p-6 text-center text-gray-500">Loading...</div>;
   if (error) return <div className="p-6 text-center text-red-600">{error}</div>;
 
@@ -136,13 +183,6 @@ const CardsPage: React.FC = () => {
         <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold text-gray-800">Cards</h1>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            {/* <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              <PlusIcon className="h-5 w-5" />
-              Create Card
-            </button> */}
             <input
               type="text"
               placeholder="Search cards..."
@@ -218,14 +258,18 @@ const CardsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Create Card Modal */}
-        <CreateCardModal
-          open={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreate={handleCreateCard}
-          loading={createLoading}
-          error={createError}
-        />
+        {/* Create Card Modal - FIXED: use 'user' instead of 'currentUser' */}
+        {user && (
+          <CreateCardModal
+            open={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onCreate={handleCreateCard}
+            loading={createLoading}
+            error={createError}
+            user_type={user.user_type as 'ADMIN' | 'HEAD'} // Cast to the expected type
+            user_department={getUserDepartmentId()} // Get department ID for HEAD users
+          />
+        )}
       </div>
     </div>
   );
