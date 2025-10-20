@@ -76,7 +76,7 @@ const UsersPage: React.FC = () => {
     return `${trimmedBase}${avatar.startsWith("/") ? "" : "/"}${avatar}`;
   };
 
-  const renderSection = (title: string, type: string) => {
+  const renderSection = (title: string, type: string, largerHeight: boolean = false) => {
     const filtered = users.filter((user) => {
       const userType = user.user_type.toLowerCase();
       const targetType = type.toLowerCase();
@@ -97,7 +97,7 @@ const UsersPage: React.FC = () => {
     return (
       <div className="mb-10">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">{title}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${largerHeight ? 'max-h-[600px]' : 'max-h-96'} overflow-y-auto p-4 border border-gray-200 rounded-lg`}>
           {filtered.map((user) => (
             <div
               key={user.id}
@@ -137,7 +137,7 @@ const UsersPage: React.FC = () => {
   // Show different content for HEAD users
   if (user?.user_type === 'HEAD' || user?.user_type === 'DepartmentHead') {
     return (
-      <div className="p-6">
+      <div className="p-6 h-screen overflow-y-auto">
         <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-6">
           <h3 className="font-medium">Staff Management</h3>
           <p className="text-sm mt-1">
@@ -146,14 +146,14 @@ const UsersPage: React.FC = () => {
           </p>
         </div>
         <h1 className="text-2xl font-semibold text-gray-800 mb-6">Your Department Staff</h1>
-        {renderSection("Staff", "STAFF")}
+        {renderSection("Staff", "STAFF", true)}
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-gray-800 mb-6">Users</h1>
+    <div className="p-6 h-screen overflow-y-auto">
+      {/* <h1 className="text-2xl font-semibold text-gray-800 mb-6">Users</h1> */}
 
       {renderSection("Admins", "ADMIN")}
       {renderSection("Heads", "HEAD")}

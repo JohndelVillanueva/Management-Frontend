@@ -114,7 +114,7 @@ const StaffManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="h-full p-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -141,7 +141,7 @@ const StaffManagement: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="h-full p-6">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           <h3 className="font-medium">Error Loading Staff</h3>
           <p className="text-sm mt-1">{error}</p>
@@ -151,123 +151,128 @@ const StaffManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Staff Management</h1>
-        <p className="text-gray-600">
-          Manage staff members in your department: <span className="font-semibold text-orange-600">
-            {user?.departmentName || 'Your Department'}
-          </span>
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FaUsers className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Staff</p>
-              <p className="text-2xl font-bold text-gray-900">{staff.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <FaUserCheck className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Staff</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {staff.filter(member => member.is_active && member.is_verified).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <FaEnvelope className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending Verification</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {staff.filter(member => !member.is_verified).length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Staff Grid */}
-      {staff.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">👥</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No staff members found</h3>
+    <div className="h-full flex flex-col">
+      {/* Header Section - Fixed */}
+      <div className="flex-shrink-0 p-6 bg-white border-b border-gray-200">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Staff Management</h1>
           <p className="text-gray-600">
-            There are no staff members assigned to your department yet.
+            Manage staff members in your department: <span className="font-semibold text-orange-600">
+              {user?.departmentName || 'Your Department'}
+            </span>
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {staff.map((member) => (
-            <div
-              key={member.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center">
-                    <StaffAvatar
-                      src={getAvatarSrc(member.avatar)}
-                      alt={`${member.first_name} ${member.last_name}`}
-                    />
-                    <div className="ml-4">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {member.first_name} {member.last_name}
-                      </h3>
-                      <p className="text-sm text-gray-500 capitalize">
-                        {member.user_type.toLowerCase()}
-                      </p>
-                    </div>
-                  </div>
-                  {getStatusBadge(member.is_active, member.is_verified)}
-                </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <FaEnvelope className="h-4 w-4 mr-2 text-gray-400" />
-                    <span className="truncate">{member.email}</span>
-                  </div>
-                  
-                  {member.phone_number && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <FaPhone className="h-4 w-4 mr-2 text-gray-400" />
-                      <span>{member.phone_number}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center text-sm text-gray-600">
-                    <FaBuilding className="h-4 w-4 mr-2 text-gray-400" />
-                    <span>{member.department?.name || "No department"}</span>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs text-gray-500">
-                    Joined: {new Date(member.created_at).toLocaleDateString()}
-                  </p>
-                </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FaUsers className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                <p className="text-2xl font-bold text-gray-900">{staff.length}</p>
               </div>
             </div>
-          ))}
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <FaUserCheck className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Staff</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {staff.filter(member => member.is_active && member.is_verified).length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <FaEnvelope className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending Verification</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {staff.filter(member => !member.is_verified).length}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+        {staff.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="text-6xl mb-4">👥</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No staff members found</h3>
+            <p className="text-gray-600">
+              There are no staff members assigned to your department yet.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
+            {staff.map((member) => (
+              <div
+                key={member.id}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+              >
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center">
+                      <StaffAvatar
+                        src={getAvatarSrc(member.avatar)}
+                        alt={`${member.first_name} ${member.last_name}`}
+                      />
+                      <div className="ml-4">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {member.first_name} {member.last_name}
+                        </h3>
+                        <p className="text-sm text-gray-500 capitalize">
+                          {member.user_type.toLowerCase()}
+                        </p>
+                      </div>
+                    </div>
+                    {getStatusBadge(member.is_active, member.is_verified)}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <FaEnvelope className="h-4 w-4 mr-2 text-gray-400" />
+                      <span className="truncate">{member.email}</span>
+                    </div>
+                    
+                    {member.phone_number && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <FaPhone className="h-4 w-4 mr-2 text-gray-400" />
+                        <span>{member.phone_number}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center text-sm text-gray-600">
+                      <FaBuilding className="h-4 w-4 mr-2 text-gray-400" />
+                      <span>{member.department?.name || "No department"}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-xs text-gray-500">
+                      Joined: {new Date(member.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

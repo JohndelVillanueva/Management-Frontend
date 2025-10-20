@@ -30,28 +30,59 @@ const CardsPage: React.FC = () => {
     setError('');
     try {
       let url = 'http://localhost:3000/cards';
-
-      // Build query params similar to the sidebar filtering
-      if (user?.user_type === 'HEAD') {
+      const params = new URLSearchParams();
+  
+      // For HEAD and STAFF - use main endpoint with departmentId filter
+      if (user?.user_type === 'HEAD' || user?.user_type === 'STAFF') {
         const departmentId = (user as any).department?.id ?? (user as any).departmentId;
-        const params = new URLSearchParams();
-        params.set('userId', String((user as any).id));
-        if (departmentId) params.set('departmentId', String(departmentId));
-        url += `?${params.toString()}`;
-      } else if (user?.user_type === 'STAFF') {
-        const departmentId = (user as any)?.department?.id ?? (user as any)?.departmentId;
         if (departmentId) {
-          const params = new URLSearchParams();
           params.set('departmentId', String(departmentId));
-          url += `?${params.toString()}`;
+          console.log('Using main endpoint with department filter:', departmentId);
         }
+      } else if (user?.user_type === 'ADMIN') {
+        // For admin, get all cards
+        console.log('Using main endpoint for ADMIN (all cards)');
       }
-
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch cards');
+  
+      // Add the params to URL if we have any
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+  
+      console.log('Fetching cards from URL:', url);
+  
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+  
+      const res = await fetch(url, { headers });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`HTTP ${res.status} error from ${url}:`, errorText);
+        
+        let errorMessage = `Failed to fetch cards (${res.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If not JSON, use the text as is
+          errorMessage = errorText || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
       const data = await res.json();
+      console.log(`Received ${data.length} cards from ${url}`);
       setCards(data);
     } catch (err: any) {
+      console.error('Error in fetchCards:', err);
       setError(err.message || 'Error loading cards');
     } finally {
       setLoading(false);
@@ -62,79 +93,70 @@ const CardsPage: React.FC = () => {
     fetchCards();
   }, [user]);
 
-const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null, expiresAt: Date | null) => {
-  setCreateLoading(true);
-  setCreateError('');
-  
-  try {
-    // Get the token from localStorage
-    const token = localStorage.getItem('token');
-    console.log('Token from localStorage:', token);
+  const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null) => {
+    setCreateLoading(true);
+    setCreateError('');
     
-    if (!token) {
-      setCreateError('No authentication token found. Please log in again.');
-      setCreateLoading(false);
-      return false;
-    }
-
-    // Decode the token to see what's in it (client-side)
     try {
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      console.log('Decoded token payload:', decoded);
-    } catch (e) {
-      console.log('Could not decode token:', e);
-    }
+      // Get the token from localStorage
+      const token = localStorage.getItem('token');
+      console.log('Token from localStorage:', token);
+      
+      if (!token) {
+        setCreateError('No authentication token found. Please log in again.');
+        setCreateLoading(false);
+        return false;
+      }
 
-    const requestBody: any = {
-      title,
-      description,
-      departmentId,
-    };
+      const requestBody: any = {
+        title,
+        description,
+        departmentId,
+      };
 
-    if (headId) requestBody.headId = headId;
-    if (expiresAt) requestBody.expiresAt = expiresAt.toISOString();
+      if (headId) requestBody.headId = headId;
 
-    console.log('Sending request with headers:', {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
-
-    const response = await fetch('http://localhost:3000/cards', {
-      method: 'POST',
-      headers: { 
+      console.log('Sending request with headers:', {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    console.log('Response status:', response.status);
-    
-    if (response.ok) {
-      const createdCard = await response.json();
-      console.log('Created card:', createdCard);
-      await fetchCards();
-      setCreateLoading(false);
-      return true;
-    } else {
-      const errorText = await response.text();
-      console.error('Error response text:', errorText);
-      try {
-        const errorData = JSON.parse(errorText);
-        setCreateError(errorData.error || 'Failed to create card');
-      } catch {
-        setCreateError('Failed to create card');
+      });
+
+      const response = await fetch('http://localhost:3000/cards', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const createdCard = await response.json();
+        console.log('Created card:', createdCard);
+        await fetchCards();
+        setCreateLoading(false);
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('Error response text:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          setCreateError(errorData.error || 'Failed to create card');
+        } catch {
+          setCreateError('Failed to create card');
+        }
+        setCreateLoading(false);
+        return false;
       }
+    } catch (error) {
+      console.error('Network error:', error);
+      setCreateError('Network error occurred');
       setCreateLoading(false);
       return false;
     }
-  } catch (error) {
-    console.error('Network error:', error);
-    setCreateError('Network error occurred');
-    setCreateLoading(false);
-    return false;
-  }
-};
+  };
 
   const departmentOptions = useMemo(() => {
     const set = new Set<string>();
@@ -202,7 +224,7 @@ const handleCreateCard = async (title: string, description: string, departmentId
             </select>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'recent' | 'title')}
+              onChange={(e) => setSortBy(e.target as 'recent' | 'title')}
               className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
             >
               <option value="recent">Most Recent</option>
@@ -237,7 +259,7 @@ const handleCreateCard = async (title: string, description: string, departmentId
             {filtered.map((card) => (
               <button
                 key={card.id}
-                onClick={() => navigate(`/CardDetails/${card.id}`)}
+                onClick={() => navigate(`/cardDetails/${card.id}`)}
                 className="text-left bg-white rounded-xl shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transform transition border border-gray-200 group"
               >
                 <div className="flex items-center justify-between mb-2">

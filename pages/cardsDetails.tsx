@@ -24,11 +24,9 @@ const CardDetails = () => {
   const [card, setCard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // Removed submissions; only showing files list
   const [modalOpen, setModalOpen] = useState(false);
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
-  // Filters and sorting
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "name" | "size" | "owner">("recent");
@@ -43,20 +41,26 @@ const CardDetails = () => {
       
       setLoading(true);
       try {
-        // Fetch card details
+        // Fetch card details - files are included in the card response
         const cardRes = await fetch(`http://localhost:3000/cards/${id}`);
         if (cardRes.ok) {
           const cardData = await cardRes.json();
+          console.log('Card data received:', cardData);
           setCard(cardData);
+          
+          // Files are included in the card response under 'files' property
+          if (cardData.files && Array.isArray(cardData.files)) {
+            setFiles(cardData.files);
+          } else {
+            setFiles([]);
+          }
+        } else {
+          const errorText = await cardRes.text();
+          console.error('Error fetching card:', errorText);
+          setError('Failed to load card details');
         }
-
-        // Fetch files for this card
-        const filesRes = await fetch(`http://localhost:3000/submission/${id}/files`);
-        if (filesRes.ok) {
-          const filesData = await filesRes.json();
-          setFiles(filesData);
-        }
-      } catch (err) {
+      } catch (err: any) {
+        console.error('Error in fetchData:', err);
         setError(err.message || 'Error loading data');
       } finally {
         setLoading(false);
@@ -79,15 +83,43 @@ const CardDetails = () => {
         formData.append("departmentId", card.department.id);
       }
 
-      const response = await fetch(`http://localhost:3000/submission/${id}`,
-        { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("authToken") || sessionStorage.getItem("authToken")}` }, body: formData }
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {};
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Use the correct endpoint - check your backend routes
+      const response = await fetch(`http://localhost:3000/submissions/${id}`,
+        { 
+          method: "POST", 
+          headers,
+          body: formData 
+        }
       );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Upload failed");
+      }
+      
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || result.message || "Upload failed");
-      const filesRes = await fetch(`http://localhost:3000/submission/${id}/files`);
-      if (filesRes.ok) setFiles(await filesRes.json());
+      console.log('Upload successful:', result);
+      
+      // Refresh the card data to get updated files
+      const cardRes = await fetch(`http://localhost:3000/cards/${id}`);
+      if (cardRes.ok) {
+        const cardData = await cardRes.json();
+        setCard(cardData);
+        if (cardData.files && Array.isArray(cardData.files)) {
+          setFiles(cardData.files);
+        }
+      }
+      
       setModalOpen(false);
     } catch (err: any) {
+      console.error('Upload error:', err);
       alert(`Error: ${err.message}`);
     } finally {
       setUploading(false);
@@ -111,8 +143,6 @@ const CardDetails = () => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
-
-  const departmentName = card?.department?.name || "Department";
 
   // Available file types for filter dropdown
   const typeOptions = useMemo(() => {
@@ -181,16 +211,97 @@ const CardDetails = () => {
     return list;
   }, [files, query, typeFilter, sortBy, sortDirection]);
 
+  // Handle file download/view
+  const handleFileAction = async (fileId: number, action: 'view' | 'download') => {
+    try {
+      // Since files are included in the card response, we can use the file path directly
+      const file = files.find(f => f.id === fileId);
+      if (!file || !file.path) {
+        alert('File path not found');
+        return;
+      }
+
+      const fileUrl = `http://localhost:3000${file.path}`;
+      
+      if (action === 'view') {
+        window.open(fileUrl, '_blank');
+      } else if (action === 'download') {
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('File action error:', err);
+      alert('Error accessing file');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex bg-gray-100 h-screen w-full p-0 m-0 flex flex-col">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading card details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex bg-gray-100 h-screen w-full p-0 m-0 flex flex-col">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="text-red-600 text-xl mb-4">Error</div>
+            <p className="text-gray-700 mb-4">{error}</p>
+            <button
+              onClick={() => navigate('/cards')}
+              className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              Back to Cards
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!card) {
+    return (
+      <div className="flex bg-gray-100 h-screen w-full p-0 m-0 flex flex-col">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-gray-700 mb-4">Card not found</p>
+            <button
+              onClick={() => navigate('/cards')}
+              className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              Back to Cards
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex bg-gray-100 h-screen w-full p-0 m-0 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 p-6 bg-white shadow-sm border-b border-gray-200">
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {card?.title || 'Card Files'}
+            {card.title}
           </h1>
           <p className="text-sm text-gray-600">
-            {card?.department?.name || 'No Department'} • {files.length} files
+            {card.department?.name || 'No Department'} • {files.length} files
+            {card.description && (
+              <span className="ml-4 text-gray-500">• {card.description}</span>
+            )}
           </p>
         </div>
         <div className="flex gap-3">
@@ -203,7 +314,7 @@ const CardDetails = () => {
             <ArrowUpTrayIcon className="h-5 w-5" />
           </button>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/cards')}
             className="bg-gray-600 text-white p-2 rounded-lg hover:bg-gray-700 transition-colors"
             aria-label="Go back"
           >
@@ -212,6 +323,7 @@ const CardDetails = () => {
         </div>
       </div>
 
+      {/* Rest of your component remains the same... */}
       {/* Controls */}
       <div className="px-6 mb-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -380,12 +492,7 @@ const CardDetails = () => {
 
           {/* Table Body */}
           <div className="divide-y divide-gray-200">
-            {loading ? (
-              <div className="px-6 py-12 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
-                <p className="text-gray-500">Loading files...</p>
-              </div>
-            ) : filteredFiles.length === 0 ? (
+            {filteredFiles.length === 0 ? (
               <div className="px-6 py-12 text-center text-gray-500">
                 <div className="flex flex-col items-center">
                   <div className="text-6xl mb-4">📁</div>
@@ -457,23 +564,20 @@ const CardDetails = () => {
                     <div className="flex items-center space-x-1">
                       {file.path && (
                         <>
-                          <a
-                            href={`http://localhost:3000${file.path}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => handleFileAction(file.id, 'view')}
                             className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                             title="View file"
                           >
                             <EyeIcon className="h-4 w-4" />
-                          </a>
-                          <a
-                            href={`http://localhost:3000${file.path}`}
-                            download
+                          </button>
+                          <button
+                            onClick={() => handleFileAction(file.id, 'download')}
                             className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                             title="Download file"
                           >
                             <DocumentArrowDownIcon className="h-4 w-4" />
-                          </a>
+                          </button>
                         </>
                       )}
                     </div>
@@ -490,6 +594,5 @@ const CardDetails = () => {
     </div>
   );
 };
-// Modal handled inside UploadFileModal
 
 export default CardDetails;

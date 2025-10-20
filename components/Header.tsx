@@ -41,11 +41,13 @@ const Header: React.FC = () => {
     STAFF: "/StaffDashboard",
   };
 
+  // Fixed useEffect - only redirect to login if no user
   useEffect(() => {
     if (!user) {
       navigate("/login");
     } else {
       const path = dashboardPaths[user.user_type];
+      // Only navigate if we're on root or login page
       if (window.location.pathname === "/" || window.location.pathname === "/login") {
         navigate(path);
       }
@@ -119,18 +121,34 @@ const Header: React.FC = () => {
     [navigate]
   );
 
+  // Fixed navIcons with proper home button handling
   const navIcons = useMemo(
     () => [
-      { icon: <FaHome />, path: "/", label: "Home" },
+      { 
+        icon: <FaHome />, 
+        path: "/", 
+        label: "Home", 
+        onClick: () => {
+          if (user) {
+            const path = dashboardPaths[user.user_type];
+            navigate(path);
+          }
+        }
+      },
       {
         icon: <FaInfoCircle />,
         path: "#",
         label: "About",
         onClick: toggleInfoSidebar,
       },
-      { icon: <FaEnvelope />, path: "/contact", label: "Contact" },
+      { 
+        icon: <FaEnvelope />, 
+        path: "/contact", 
+        label: "Contact",
+        onClick: () => navigate("/contact")
+      },
     ],
-    [toggleInfoSidebar]
+    [toggleInfoSidebar, user, navigate]
   );
 
   const toggleProfileDropdown = useCallback(() => {
@@ -193,9 +211,7 @@ const Header: React.FC = () => {
           {navIcons.map((navItem) => (
             <button
               key={navItem.path}
-              onClick={
-                navItem.onClick || (() => (window.location.href = navItem.path))
-              }
+              onClick={navItem.onClick}
               className="hover:text-orange-600 transition-colors p-1 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
               aria-label={navItem.label}
             >

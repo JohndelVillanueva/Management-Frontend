@@ -7,64 +7,67 @@ const VerifyEmail: React.FC = () => {
   const baseUrl = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+  const userId = searchParams.get('userId');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(null);
   const [countdown, setCountdown] = useState(5); // For success redirect countdown
 
   useEffect(() => {
+    if (!token || !userId) {
+      setLoading(false);
+      setSuccess(false);
+      setMessage("Invalid verification link - missing parameters.");
+      return;
+    }
     const verifyEmail = async () => {
-      const token = searchParams.get("token");
-      const userId = searchParams.get("userId");
+      const res = await fetch(`${baseUrl}/auth/verify-email?token=${encodeURIComponent(token)}&userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
 
-      if (!token || !userId) {
-        setLoading(false);
+      if (data.success) {
+        setSuccess(true);
+        setMessage("🎉 Email verified successfully! Redirecting to dashboard...");
+        localStorage.setItem("authToken", data.token);
+      } else {
         setSuccess(false);
-        setMessage("Invalid verification link - missing parameters");
-        return;
+        setMessage(data.message || "Verification failed");
       }
-
-      try {
-        const response = await axios.get(`${baseUrl}/auth/verify-email`, {
-          params: { token, userId },
-        });
-
-        if (response.data.success) {
-          setSuccess(true);
-          setMessage("🎉 Email verified successfully! Redirecting to dashboard...");
-          localStorage.setItem("authToken", response.data.token);
-
-          // Start countdown
-          const timer = setInterval(() => {
-            setCountdown((prev) => {
-              if (prev <= 1) {
-                clearInterval(timer);
-                navigate("/login", { replace: true });
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-
-          return () => clearInterval(timer);
-        } else {
-          setSuccess(false);
-          setMessage(response.data.message || "Verification failed");
-        }
-      } catch (err) {
-        setSuccess(false);
-        setMessage(
-          axios.isAxiosError(err)
-            ? err.response?.data?.message || "Verification failed"
-            : "An unknown error occurred"
-        );
-      } finally {
-        setLoading(false);
-      }
+      setLoading(false);
     };
 
     verifyEmail();
-  }, [baseUrl, navigate, searchParams]);
+  }, [baseUrl, navigate, token, userId]);
+
+  const handleGoToLogin = () => {
+    localStorage.removeItem("token"); // or whatever key you use
+    // If you use cookies, clear the cookie here as well
+    navigate("/login");
+  };
+
+  useEffect(() => {
+    if (success === false) {
+      localStorage.removeItem('token');
+      // clear cookie if needed
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (success) {
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate("/login", { replace: true });
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [success, navigate]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -99,12 +102,9 @@ const VerifyEmail: React.FC = () => {
             </div>
             <p className="text-lg font-medium text-red-600">{message}</p>
             <div className="space-y-2">
-              <button
-                onClick={() => navigate("/login", { replace: true })}
-                className="block w-full px-4 py-2 text-blue-600 hover:underline"
-              >
+              <a onClick={handleGoToLogin} style={{ cursor: 'pointer', color: 'blue' }}>
                 Go to Login Page
-              </button>
+              </a>
               <button
                 onClick={() => navigate("/resend-verification", { replace: true })}
                 className="block w-full px-4 py-2 text-blue-600 hover:underline"
