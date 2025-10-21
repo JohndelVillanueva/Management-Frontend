@@ -14,6 +14,7 @@ import {
   ChevronRightIcon,
   UserIcon,
   ArrowRightOnRectangleIcon,
+  RectangleStackIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -68,12 +69,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           path: '/departments',
           active: location.pathname === '/departments',
         },
-        {
-          name: 'Analytics',
-          icon: ChartBarIcon,
-          path: '/analytics',
-          active: location.pathname === '/analytics',
-        }
       );
     }
 
@@ -129,6 +124,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   };
 
   const navItems = getNavItems();
+  
+  // Filter cards based on user type
+  const filteredCards = cards.filter(card => {
+    if (user?.user_type === 'HEAD') {
+      return card.department?.id === user?.departmentId || card.headId === user?.id;
+    }
+    if (user?.user_type === 'ADMIN') {
+      return true;
+    }
+    return false;
+  });
+
+  const showCardsSection = (user?.user_type === 'ADMIN' || user?.user_type === 'HEAD') && filteredCards.length > 0;
 
   return (
     <div className={`fixed left-0 top-0 h-full bg-white shadow-lg transition-all duration-300 z-40 flex flex-col ${
@@ -175,49 +183,71 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 overflow-y-auto">
+        {/* Main Navigation Items */}
         <ul className="space-y-2">
-          {navItems.map((item, idx) => (
-            <React.Fragment key={item.name}>
-              <li>
-                <button
-                  onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors ${
-                    item.active
-                      ? 'bg-orange-100 text-orange-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {isOpen && <span className="ml-3 text-sm font-medium">{item.name}</span>}
-                </button>
-              </li>
-              {/* Insert cards after Reports */}
-              {item.name === 'Reports' && cards.length > 0 && (
-                cards
-                  .filter(card => {
-                    if (user?.user_type === 'HEAD') {
-                      return card.department?.id === user?.departmentId || card.headId === user?.id;
-                    }
-                    if (user?.user_type === 'ADMIN') {
-                      return true; // Admins see all; adjust if needed
-                    }
-                    return false;
-                  })
-                  .map(card => (
+          {navItems.map((item) => (
+            <li key={item.name}>
+              <button
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors ${
+                  item.active
+                    ? 'bg-orange-100 text-orange-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {isOpen && <span className="ml-3 text-sm font-medium">{item.name}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {/* Cards Section - Separated */}
+        {showCardsSection && (
+          <div className="mt-6">
+            {/* Section Divider */}
+            <div className="mb-3">
+              {isOpen ? (
+                <div className="flex items-center">
+                  <div className="flex-1 border-t border-gray-300"></div>
+                  <span className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    My Cards
+                  </span>
+                  <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+              ) : (
+                <div className="border-t border-gray-300"></div>
+              )}
+            </div>
+
+            {/* Cards List */}
+            <ul className="space-y-2">
+              {filteredCards.map(card => {
+                const isActive = location.pathname === `/CardDetails/${card.id}`;
+                return (
                   <li key={card.id}>
                     <button
                       onClick={() => navigate(`/CardDetails/${card.id}`)}
-                      className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100`}
+                      className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-orange-100 text-orange-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      title={isOpen ? card.title : `Card: ${card.title}`}
                     >
-                      <FolderIcon className="h-5 w-5 flex-shrink-0" />
-                      {isOpen && <span className="ml-3 text-sm font-medium">{card.title}</span>}
+                      <RectangleStackIcon className="h-5 w-5 flex-shrink-0" />
+                      {isOpen && (
+                        <span className="ml-3 text-sm font-medium truncate">
+                          {card.title}
+                        </span>
+                      )}
                     </button>
                   </li>
-                ))
-              )}
-            </React.Fragment>
-          ))}
-        </ul>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </nav>
 
       {/* Footer - Logout Button */}
@@ -234,4 +264,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   );
 };
 
-export default Sidebar; 
+export default Sidebar;

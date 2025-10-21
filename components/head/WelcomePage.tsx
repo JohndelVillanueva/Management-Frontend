@@ -10,6 +10,7 @@ import {
   ExclamationTriangleIcon,
   Bars3Icon,
   XMarkIcon,
+  BuildingOfficeIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../context/AuthContext";
 
@@ -17,6 +18,8 @@ const HeadWelcomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [departmentName, setDepartmentName] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const [departmentStats, setDepartmentStats] = useState({
     totalStaff: 15,
     activeStaff: 12,
@@ -25,6 +28,37 @@ const HeadWelcomePage = () => {
     totalCards: 0,
     activeCards: 0,
   });
+
+  // Fetch department name
+  useEffect(() => {
+    const fetchDepartmentName = async () => {
+      if (!user?.departmentId) {
+        setDepartmentName("Department");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/departments/${user.departmentId}`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setDepartmentName(data.name || "Department");
+        } else {
+          setDepartmentName("Department");
+        }
+      } catch (error) {
+        console.error("Error fetching department:", error);
+        setDepartmentName("Department");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartmentName();
+  }, [user?.departmentId]);
 
   const recentActivity = [
     {
@@ -85,7 +119,7 @@ const HeadWelcomePage = () => {
     },
   ];
 
-  const getActivityIcon = (type) => {
+  const getActivityIcon = (type: string) => {
     switch (type) {
       case "submission":
         return <DocumentTextIcon className="h-5 w-5 text-blue-500" />;
@@ -98,7 +132,7 @@ const HeadWelcomePage = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
         return "text-green-600 bg-green-100";
@@ -111,7 +145,7 @@ const HeadWelcomePage = () => {
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
         return "text-red-600 bg-red-100";
@@ -157,16 +191,28 @@ const HeadWelcomePage = () => {
           </div>
           <div className="p-4">
             <nav className="space-y-2">
-              <button className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100">
+              <button 
+                onClick={() => navigate("/HeadDashboard")}
+                className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
+              >
                 Dashboard
               </button>
-              <button className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100">
+              <button 
+                onClick={() => navigate("/staff")}
+                className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
+              >
                 Staff Management
               </button>
-              <button className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100">
+              <button 
+                onClick={() => navigate("/reports")}
+                className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
+              >
                 Reports
               </button>
-              <button className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100">
+              <button 
+                onClick={() => navigate("/cards")}
+                className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
+              >
                 Cards
               </button>
             </nav>
@@ -176,26 +222,51 @@ const HeadWelcomePage = () => {
         <div className="flex-1 p-4 lg:ml-0">
           <div className="max-w-7xl mx-auto">
             {/* Header with mobile menu button */}
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <button 
-                  className="lg:hidden p-2 rounded-lg bg-white shadow-sm mr-2"
-                  onClick={() => setIsSidebarOpen(true)}
-                >
-                  <Bars3Icon className="h-6 w-6" />
-                </button>
-                <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
-                  Department Head Dashboard
-                </h1>
-                <p className="text-gray-600 mt-1 text-sm lg:text-base">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex-1">
+                <div className="flex items-center mb-2">
+                  <button 
+                    className="lg:hidden p-2 rounded-lg bg-white shadow-sm mr-2"
+                    onClick={() => setIsSidebarOpen(true)}
+                  >
+                    <Bars3Icon className="h-6 w-6" />
+                  </button>
+                  <div>
+                    {loading ? (
+                      <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
+                    ) : (
+                      <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
+                        {departmentName} Department
+                      </h1>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Department Badge */}
+                <div className="flex items-center mt-2">
+                  <div className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                    <BuildingOfficeIcon className="h-4 w-4 mr-1" />
+                    <span className="font-medium">
+                      {loading ? "Loading..." : departmentName}
+                    </span>
+                  </div>
+                </div>
+                
+                <p className="text-gray-600 mt-2 text-sm lg:text-base">
                   Manage your department's activities and staff performance
                 </p>
               </div>
-              <div className="hidden lg:block">
+              
+              <div className="hidden lg:block ml-4">
                 <div className="flex items-center space-x-4">
-                  <span className="text-gray-700">Welcome, {user?.name}</span>
-                  <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                    {user?.name?.charAt(0) || 'U'}
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-700">
+                      {user?.first_name} {user?.last_name}
+                    </p>
+                    <p className="text-xs text-gray-500">Department Head</p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold">
+                    {user?.first_name?.charAt(0) || 'U'}
                   </div>
                 </div>
               </div>
