@@ -12,6 +12,8 @@ import {
   ChevronDownIcon
 } from "@heroicons/react/24/outline";
 import UploadFileModal from "../modals/UploadFileModal";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const CardDetails = () => {
   const { id } = useParams();
@@ -58,10 +60,12 @@ const CardDetails = () => {
           const errorText = await cardRes.text();
           console.error('Error fetching card:', errorText);
           setError('Failed to load card details');
+          toast.error('Failed to load card details');
         }
       } catch (err: any) {
         console.error('Error in fetchData:', err);
         setError(err.message || 'Error loading data');
+        toast.error(err.message || 'Error loading data');
       } finally {
         setLoading(false);
       }
@@ -90,22 +94,30 @@ const CardDetails = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Use the correct endpoint - check your backend routes
-      const response = await fetch(`http://localhost:3000/submissions/${id}`,
-        { 
-          method: "POST", 
-          headers,
-          body: formData 
-        }
-      );
+      // PROPER ENDPOINT: Based on your backend route configuration
+      // Your route is POST /submissions/:id
+      const response = await fetch(`http://localhost:3000/submissions/${id}`, {
+        method: "POST", 
+        headers,
+        body: formData 
+      });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Upload failed");
+        let errorText;
+        try {
+          const errorData = await response.json();
+          errorText = errorData.error || errorData.details || response.statusText;
+        } catch {
+          errorText = await response.text();
+        }
+        throw new Error(errorText || `Upload failed with status: ${response.status}`);
       }
       
       const result = await response.json();
       console.log('Upload successful:', result);
+      
+      // Show success toast
+      toast.success('File uploaded successfully!');
       
       // Refresh the card data to get updated files
       const cardRes = await fetch(`http://localhost:3000/cards/${id}`);
@@ -120,7 +132,8 @@ const CardDetails = () => {
       setModalOpen(false);
     } catch (err: any) {
       console.error('Upload error:', err);
-      alert(`Error: ${err.message}`);
+      // Show error toast instead of alert
+      toast.error(`Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
     }
@@ -217,7 +230,7 @@ const CardDetails = () => {
       // Since files are included in the card response, we can use the file path directly
       const file = files.find(f => f.id === fileId);
       if (!file || !file.path) {
-        alert('File path not found');
+        toast.error('File path not found');
         return;
       }
 
@@ -232,10 +245,11 @@ const CardDetails = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        toast.success('Download started');
       }
     } catch (err) {
       console.error('File action error:', err);
-      alert('Error accessing file');
+      toast.error('Error accessing file');
     }
   };
 
@@ -248,6 +262,7 @@ const CardDetails = () => {
             <p className="text-gray-500">Loading card details...</p>
           </div>
         </div>
+        <ToastContainer position="bottom-right" />
       </div>
     );
   }
@@ -267,6 +282,7 @@ const CardDetails = () => {
             </button>
           </div>
         </div>
+        <ToastContainer position="bottom-right" />
       </div>
     );
   }
@@ -285,12 +301,27 @@ const CardDetails = () => {
             </button>
           </div>
         </div>
+        <ToastContainer position="bottom-right" />
       </div>
     );
   }
 
   return (
     <div className="flex bg-gray-100 h-screen w-full p-0 m-0 flex flex-col">
+      {/* Toast Container */}
+      <ToastContainer 
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+      
       {/* Header */}
       <div className="flex items-center justify-between mb-4 p-6 bg-white shadow-sm border-b border-gray-200">
         <div className="flex-1">
