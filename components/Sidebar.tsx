@@ -38,6 +38,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     }
   }, [user]);
 
+  const getDashboardPath = () => {
+    switch (user?.user_type) {
+      case 'ADMIN':
+        return '/AdminDashboard';
+      case 'HEAD':
+        return '/HeadDashboard';
+      case 'STAFF':
+        return '/StaffDashboard';
+      default:
+        return '/dashboard';
+    }
+  };
+
   const getNavItems = () => {
     const baseItems = [
       {
@@ -105,17 +118,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     return baseItems;
   };
 
-  const getDashboardPath = () => {
-    switch (user?.user_type) {
-      case 'ADMIN':
-        return '/AdminDashboard';
-      case 'HEAD':
-        return '/HeadDashboard';
-      case 'STAFF':
-        return '/StaffDashboard';
-      default:
-        return '/dashboard';
-    }
+  const handleLogoClick = () => {
+    navigate(getDashboardPath());
   };
 
   const handleLogout = () => {
@@ -147,7 +151,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         {isOpen && (
           <div className="flex items-center">
             <AcademicCapIcon className="h-8 w-8 text-orange-600 mr-2" />
-            <span className="text-lg font-semibold text-gray-800">PSU Portal</span>
+            <button
+              onClick={handleLogoClick}
+              className="text-lg font-semibold text-gray-800 hover:text-orange-600 transition-colors cursor-pointer"
+            >
+              PSU Portal
+            </button>
           </div>
         )}
         <button

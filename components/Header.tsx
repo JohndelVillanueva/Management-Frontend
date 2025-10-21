@@ -1,9 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaHome,
-  FaInfoCircle,
-  FaEnvelope,
   FaTachometerAlt,
   FaCog,
   FaUserShield,
@@ -121,35 +118,8 @@ const Header: React.FC = () => {
     [navigate]
   );
 
-  // Fixed navIcons with proper home button handling
-  const navIcons = useMemo(
-    () => [
-      { 
-        icon: <FaHome />, 
-        path: "/", 
-        label: "Home", 
-        onClick: () => {
-          if (user) {
-            const path = dashboardPaths[user.user_type];
-            navigate(path);
-          }
-        }
-      },
-      {
-        icon: <FaInfoCircle />,
-        path: "#",
-        label: "About",
-        onClick: toggleInfoSidebar,
-      },
-      { 
-        icon: <FaEnvelope />, 
-        path: "/contact", 
-        label: "Contact",
-        onClick: () => navigate("/contact")
-      },
-    ],
-    [toggleInfoSidebar, user, navigate]
-  );
+  // Removed home, info, and message icons - now empty array
+  const navIcons = useMemo(() => [], []);
 
   const toggleProfileDropdown = useCallback(() => {
     setIsProfileDropdownOpen((prev) => {
@@ -208,6 +178,7 @@ const Header: React.FC = () => {
         </div>
 
         <nav className="flex items-center space-x-4">
+          {/* Navigation icons section is now empty */}
           {navIcons.map((navItem) => (
             <button
               key={navItem.path}
