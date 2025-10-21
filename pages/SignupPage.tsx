@@ -14,8 +14,6 @@ import {
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 
-// (Removed custom ImportMeta and ImportMetaEnv interfaces - Vite provides these types globally)
-
 export default function SignupPage() {
   const baseUrl = import.meta.env.VITE_API_URL;
   const [formData, setFormData] = useState({
@@ -38,7 +36,6 @@ export default function SignupPage() {
   const navigate = useNavigate();
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Add missing state for departments
   const [departments, setDepartments] = useState<
     { id: string; name: string }[]
   >([]);
@@ -121,8 +118,8 @@ export default function SignupPage() {
       setError("Username is required");
       return false;
     }
-    // Only require department for non-admin users
-    if (userType !== "ADMIN" && !formData.department) {
+    // Only require department for HEAD users (not ADMIN or STAFF)
+    if (userType === "HEAD" && !formData.department) {
       setError("Please select a department");
       return false;
     }
@@ -144,7 +141,9 @@ export default function SignupPage() {
 
     setIsLoading(true);
 
-    // Debug: Log the form data being sent
+    // Set department to null for ADMIN and STAFF users
+    const departmentValue = (userType === "ADMIN" || userType === "STAFF") ? null : formData.department;
+
     const requestData = {
       username: formData.username,
       firstName: formData.firstName,
@@ -152,7 +151,7 @@ export default function SignupPage() {
       email: formData.email,
       password: formData.password,
       confirmPassword: formData.confirmPassword,
-      department: userType === "ADMIN" ? null : formData.department,
+      department: departmentValue,
       userType: userType?.toUpperCase(),
       avatar: formData.avatar,
     };
@@ -181,9 +180,7 @@ export default function SignupPage() {
           throw new Error(response.statusText || "Registration failed");
         }
         
-        // Show more specific error messages
         if (errorData.details && Array.isArray(errorData.details)) {
-          // Handle Zod validation errors (array of error objects)
           const errorMessages = errorData.details.map((error: any) => {
             if (error.path && error.message) {
               return `${error.path.join('.')}: ${error.message}`;
@@ -194,14 +191,12 @@ export default function SignupPage() {
         } else if (errorData.details && typeof errorData.details === 'string') {
           throw new Error(`${errorData.error}: ${errorData.details}`);
         } else if (errorData.missing && typeof errorData.missing === 'object') {
-          // Handle missing fields object
           const missingFields = Object.entries(errorData.missing)
             .filter(([field, isMissing]) => isMissing)
             .map(([field]) => field)
             .join(', ');
           throw new Error(`${errorData.error}: Missing required fields: ${missingFields}`);
         } else if (errorData.details && typeof errorData.details === 'object') {
-          // Handle object details (like missing fields)
           const missingFields = Object.entries(errorData.details)
             .filter(([field, isMissing]) => isMissing)
             .map(([field]) => field)
@@ -494,8 +489,8 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Department Dropdown - Only show for non-admin users */}
-            {userType !== "ADMIN" ? (
+            {/* Department Dropdown - Only show for HEAD users */}
+            {userType === "HEAD" ? (
               <div>
                 <label
                   htmlFor="department"
@@ -542,7 +537,7 @@ export default function SignupPage() {
                   <p className="mt-1 text-sm text-red-600">{departmentError}</p>
                 )}
               </div>
-            ) : (
+            ) : userType === "ADMIN" ? (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
@@ -557,7 +552,22 @@ export default function SignupPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : userType === "STAFF" ? (
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-purple-700">
+                      <strong>Staff Access:</strong> Staff members don't need to be assigned to a specific department.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
