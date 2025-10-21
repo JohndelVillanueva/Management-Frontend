@@ -28,7 +28,7 @@ export default function SignupPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [userType, setUserType] = useState<"ADMIN" | "STAFF" | "HEAD" | null>(
+  const [userType, setUserType] = useState<"ADMIN" | "STAFF" | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -118,11 +118,6 @@ export default function SignupPage() {
       setError("Username is required");
       return false;
     }
-    // Only require department for HEAD users (not ADMIN or STAFF)
-    if (userType === "HEAD" && !formData.department) {
-      setError("Please select a department");
-      return false;
-    }
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return false;
@@ -141,8 +136,8 @@ export default function SignupPage() {
 
     setIsLoading(true);
 
-    // Set department to null for ADMIN and STAFF users
-    const departmentValue = (userType === "ADMIN" || userType === "STAFF") ? null : formData.department;
+    // Set department to null for all users since HEAD is removed
+    const departmentValue = null;
 
     const requestData = {
       username: formData.username,
@@ -424,7 +419,7 @@ export default function SignupPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Register as:
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setUserType("ADMIN")}
@@ -436,18 +431,6 @@ export default function SignupPage() {
                 >
                   <ShieldCheckIcon className="h-4 w-4 mr-1" />
                   Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserType("HEAD")}
-                  className={`flex items-center justify-center py-2 px-2 border rounded-lg text-xs font-medium transition-colors ${
-                    userType === "HEAD"
-                      ? "bg-orange-100 border-orange-300 text-orange-700"
-                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <UserGroupIcon className="h-4 w-4 mr-1" />
-                  Head
                 </button>
                 <button
                   type="button"
@@ -489,55 +472,8 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Department Dropdown - Only show for HEAD users */}
-            {userType === "HEAD" ? (
-              <div>
-                <label
-                  htmlFor="department"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Department
-                </label>
-                <div className="relative rounded-lg shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
-                  </div>
-                  {isDepartmentsLoading ? (
-                    <div className="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-100 animate-pulse">
-                      Loading departments...
-                    </div>
-                  ) : departmentError ? (
-                    <div className="block w-full pl-9 pr-3 py-2 text-sm border border-red-300 rounded-lg bg-red-50 text-red-600">
-                      {departmentError}
-                    </div>
-                  ) : (
-                    <select
-                      id="department"
-                      name="department"
-                      required
-                      value={formData.department}
-                      onChange={handleChange}
-                      className="block w-full pl-9 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none bg-white"
-                    >
-                      <option value="" disabled>
-                        Select a department
-                      </option>
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.name}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <ChevronDownIcon className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-                {departmentError && (
-                  <p className="mt-1 text-sm text-red-600">{departmentError}</p>
-                )}
-              </div>
-            ) : userType === "ADMIN" ? (
+            {/* Department Dropdown - Removed since HEAD user type is removed */}
+            {userType === "ADMIN" ? (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
