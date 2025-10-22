@@ -32,9 +32,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     // Only fetch cards for ADMIN or HEAD
     if (user?.user_type === 'ADMIN' || user?.user_type === 'HEAD') {
       fetch('http://localhost:3000/cards')
-        .then(res => res.json())
-        .then(data => setCards(data))
-        .catch(() => setCards([]));
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Failed to fetch cards');
+          }
+          return res.json();
+        })
+        .then(data => {
+          // Ensure data is an array
+          if (Array.isArray(data)) {
+            setCards(data);
+          } else {
+            console.error('Cards response is not an array:', data);
+            setCards([]);
+          }
+        })
+        .catch((err) => {
+          console.error('Error fetching cards:', err);
+          setCards([]);
+        });
+    } else {
+      setCards([]);
     }
   }, [user]);
 
@@ -129,8 +147,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
   const navItems = getNavItems();
   
-  // Filter cards based on user type
-  const filteredCards = cards.filter(card => {
+  // Filter cards based on user type - ensure cards is an array
+  const filteredCards = Array.isArray(cards) ? cards.filter(card => {
     if (user?.user_type === 'HEAD') {
       return card.department?.id === user?.departmentId || card.headId === user?.id;
     }
@@ -138,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
       return true;
     }
     return false;
-  });
+  }) : [];
 
   const showCardsSection = (user?.user_type === 'ADMIN' || user?.user_type === 'HEAD') && filteredCards.length > 0;
 
@@ -273,4 +291,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   );
 };
 
-export default Sidebar;
+export default Sidebar
