@@ -195,6 +195,9 @@ const CardsPage: React.FC = () => {
     return (user as any).department?.id ?? (user as any).departmentId;
   };
 
+  // Check if user is staff (should not see create card button)
+  const isStaff = user?.user_type === 'STAFF';
+
   if (loading) return <div className="p-6 text-center text-gray-500">Loading...</div>;
   if (error) return <div className="p-6 text-center text-red-600">{error}</div>;
 
@@ -237,24 +240,29 @@ const CardsPage: React.FC = () => {
         {filtered.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             No cards available.
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors mx-auto"
-            >
-              <PlusIcon className="h-5 w-5" />
-              Create Your First Card
-            </button>
+            {/* Only show create button for non-staff users when no cards */}
+            {!isStaff && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors mx-auto"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Create Your First Card
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {/* Create Card Button as the first card */}
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="text-left bg-white rounded-xl shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transform transition border-2 border-dashed border-gray-300 group flex flex-col items-center justify-center min-h-[180px] text-gray-500 hover:text-orange-600 hover:border-orange-400"
-            >
-              <PlusIcon className="h-12 w-12 mb-3 text-gray-400 group-hover:text-orange-500" />
-              <span className="font-medium">Create New Card</span>
-            </button>
+            {/* Create Card Button as the first card - Only show for non-staff users */}
+            {!isStaff && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="text-left bg-white rounded-xl shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transform transition border-2 border-dashed border-gray-300 group flex flex-col items-center justify-center min-h-[180px] text-gray-500 hover:text-orange-600 hover:border-orange-400"
+              >
+                <PlusIcon className="h-12 w-12 mb-3 text-gray-400 group-hover:text-orange-500" />
+                <span className="font-medium">Create New Card</span>
+              </button>
+            )}
 
             {filtered.map((card) => (
               <button
@@ -280,8 +288,8 @@ const CardsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Create Card Modal - FIXED: use 'user' instead of 'currentUser' */}
-        {user && (
+        {/* Create Card Modal - Only show for non-staff users */}
+        {user && !isStaff && (
           <CreateCardModal
             open={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}

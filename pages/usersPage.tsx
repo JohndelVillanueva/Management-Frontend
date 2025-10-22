@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import EditUserModal from "../modals/EditUserModal";
 import { 
   PencilIcon, 
-  TrashIcon,
+  // TrashIcon, // Commented out for now
   ComputerDesktopIcon,
   CalculatorIcon,
   BeakerIcon,
@@ -345,14 +345,15 @@ const UsersPage: React.FC = () => {
                 >
                   <PencilIcon className="h-3.5 w-3.5" />
                 </button>
-                <button
+                {/* Commented out delete button for now */}
+                {/* <button
                   onClick={() => handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
                   disabled={updatingUserId === user.id}
                   className="p-1.5 text-gray-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Delete user"
                 >
                   <TrashIcon className="h-3.5 w-3.5" />
-                </button>
+                </button> */}
               </div>
 
               <div className="flex items-center mb-3">
@@ -445,14 +446,15 @@ const UsersPage: React.FC = () => {
                 >
                   <PencilIcon className="h-3.5 w-3.5" />
                 </button>
-                <button
+                {/* Commented out delete button for now */}
+                {/* <button
                   onClick={() => handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
                   disabled={updatingUserId === user.id}
                   className="p-1.5 text-gray-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Delete user"
                 >
                   <TrashIcon className="h-3.5 w-3.5" />
-                </button>
+                </button> */}
               </div>
 
               <div className="flex items-center mb-3">
