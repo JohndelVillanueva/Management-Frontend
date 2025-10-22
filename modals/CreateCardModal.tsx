@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import BaseModal from './BaseModal';
 
 interface Department {
@@ -21,7 +22,7 @@ interface CreateCardModalProps {
   loading: boolean;
   error: string;
   user_type: 'ADMIN' | 'HEAD';
-  user_department?: number; // Add current user's department for HEAD users
+  user_department?: number;
 }
 
 const CreateCardModal: React.FC<CreateCardModalProps> = ({ 
@@ -48,11 +49,27 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     if (open) {
       setDeptError('');
       
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
       // For HEAD users, only fetch their own department
       if (user_type === 'HEAD' && user_department) {
-        fetch(`http://localhost:3000/departments/${user_department}`)
+        fetch(`http://localhost:3000/departments/${user_department}`, { headers })
           .then(res => {
-            if (!res.ok) throw new Error('Failed to fetch department');
+            if (!res.ok) {
+              if (res.status === 401) {
+                throw new Error('Authentication failed. Please log in again.');
+              }
+              throw new Error('Failed to fetch department');
+            }
             return res.json();
           })
           .then(data => {
@@ -60,24 +77,33 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             setDepartmentId(user_department);
             setDepartments([data]);
           })
-          .catch(() => {
-            setDeptError('Could not load department information.');
+          .catch((err) => {
+            const errorMsg = err.message || 'Could not load department information.';
+            setDeptError(errorMsg);
+            toast.error(errorMsg);
             setUserDepartmentInfo(null);
             setDepartmentId(null);
           });
       } else if (user_type === 'ADMIN') {
         // For ADMIN users, fetch all departments
-        fetch('http://localhost:3000/departments')
+        fetch('http://localhost:3000/departments', { headers })
           .then(res => {
-            if (!res.ok) throw new Error('Failed to fetch departments');
+            if (!res.ok) {
+              if (res.status === 401) {
+                throw new Error('Authentication failed. Please log in again.');
+              }
+              throw new Error('Failed to fetch departments');
+            }
             return res.json();
           })
           .then(data => {
             setDepartments(data);
             setDepartmentId(null);
           })
-          .catch(() => {
-            setDeptError('Could not load departments.');
+          .catch((err) => {
+            const errorMsg = err.message || 'Could not load departments.';
+            setDeptError(errorMsg);
+            toast.error(errorMsg);
             setDepartments([]);
             setDepartmentId(null);
           });
@@ -85,16 +111,23 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       
       // Fetch head users (only for ADMIN, as HEAD will be auto-assigned)
       if (user_type === 'ADMIN') {
-        fetch('http://localhost:3000/auth/heads')
+        fetch('http://localhost:3000/auth/heads', { headers })
           .then(res => {
-            if (!res.ok) throw new Error('Failed to fetch head users');
+            if (!res.ok) {
+              if (res.status === 401) {
+                throw new Error('Authentication failed. Please log in again.');
+              }
+              throw new Error('Failed to fetch head users');
+            }
             return res.json();
           })
           .then(data => {
             setHeadUsers(data);
             setSelectedHeadId(null);
           })
-          .catch(() => {
+          .catch((err) => {
+            const errorMsg = err.message || 'Could not load department heads.';
+            toast.error(errorMsg);
             setHeadUsers([]);
             setSelectedHeadId(null);
           });
@@ -117,10 +150,20 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     }
   }, [open, user_type, user_department]);
 
+  // Show toast when error prop changes
+  useEffect(() => {
+    if (error && open) {
+      toast.error(error);
+    }
+  }, [error, open]);
+
   if (!open) return null;
 
   const handleCreate = async () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      toast.error('Card title is required');
+      return;
+    }
     
     // For HEAD users, departmentId must be their department
     let finalDepartmentId = departmentId;
@@ -129,7 +172,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     }
     
     if (!finalDepartmentId) {
-      alert('Department is required');
+      toast.error('Department is required');
       return;
     }
     
@@ -142,7 +185,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       expirationDate = new Date(expiresAt);
       // Validate the date
       if (isNaN(expirationDate.getTime())) {
-        alert('Please enter a valid expiration date');
+        toast.error('Please enter a valid expiration date');
         return;
       }
     }
@@ -154,7 +197,9 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       finalHeadId, 
       expirationDate
     );
+    
     if (success) {
+      toast.success('Card created successfully!');
       setTitle('');
       setDescription('');
       setDepartmentId(null);

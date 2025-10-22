@@ -1,17 +1,18 @@
-import React from "react";
+// import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Layout from "../components/layouts/Layout"; // Ensure the file exists at 'src/components/Layout.tsx' or adjust the path accordingly
-import AdminDashboard from "../pages/admin/AdminDashboard"; // Ensure the file exists at 'src/pages/admin/AdminDashboard.tsx' or adjust the path accordingly
-import Login from "../pages/Login.js"; // Ensure the file exists at 'src/pages/login.tsx' or adjust the path accordingly
+import { Toaster } from 'react-hot-toast';
+import Layout from "../components/layouts/Layout";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import Login from "../pages/Login.js";
 import SignupPage from "../pages/SignupPage";
-import HeadDashboard from "../pages/head/HeadDashboard"; // Ensure the file exists at 'src/pages/head/HeadDashboard.tsx' or adjust the path accordingly
+import HeadDashboard from "../pages/head/HeadDashboard";
 import { AuthProvider } from "../context/AuthContext";
-import StaffDashboard from "../pages/staff/StaffDashboard"; // Ensure the file exists at 'src/pages/staff/StaffDashboard.tsx' or adjust the path accordingly
-import ProtectedRoute from "../components/routes/ProtectedRoutes.js"; // Ensure the file exists at 'src/components/ProtectedRoute.tsx' or adjust the path accordingly
+import StaffDashboard from "../pages/staff/StaffDashboard";
+import ProtectedRoute from "../components/routes/ProtectedRoutes.js";
 import VerifyEmail from "../pages/VerifyEmail.js";
 import Cards from '../pages/Cards';
 import CardDetails from '../pages/cardsDetails.js';
-import SubmissionDetails from "../pages/SubmissionDetails"; // Ensure the path is correct and the component exists
+import SubmissionDetails from "../pages/SubmissionDetails";
 import Departments from "../pages/Departments";
 import UsersPage from "../pages/usersPage";
 import Analytics from "../pages/Analytics.js";
@@ -21,6 +22,55 @@ export default function routes() {
   return (
     <Router>
       <AuthProvider>
+        <Toaster 
+          position="top-right"
+          reverseOrder={false}
+          gutter={8}
+          containerClassName=""
+          containerStyle={{}}
+          toastOptions={{
+            // Default options
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+              padding: '16px',
+              borderRadius: '8px',
+              fontSize: '14px',
+            },
+            // Success toast style
+            success: {
+              duration: 3000,
+              style: {
+                background: '#10b981',
+                color: '#fff',
+              },
+              iconTheme: {
+                primary: '#fff',
+                secondary: '#10b981',
+              },
+            },
+            // Error toast style
+            error: {
+              duration: 4000,
+              style: {
+                background: '#ef4444',
+                color: '#fff',
+              },
+              iconTheme: {
+                primary: '#fff',
+                secondary: '#ef4444',
+              },
+            },
+            // Loading toast style
+            loading: {
+              style: {
+                background: '#3b82f6',
+                color: '#fff',
+              },
+            },
+          }}
+        />
         <Layout>
           <Routes>
             <Route path="/" element={<Login />} />
@@ -86,13 +136,9 @@ export default function routes() {
                 </ProtectedRoute>
               }
             />
-
-            {/* <Route path="/HeadDashboard" element={<HeadDashboard />} />
-            <Route path="/StaffDashboard" element={<StaffDashboard />} /> */}
           </Routes>
         </Layout>
       </AuthProvider>
     </Router>
   );
 }
-
