@@ -140,10 +140,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     navigate(getDashboardPath());
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+const handleLogout = () => {
+  // Clear all localStorage items
+  localStorage.clear();
+  
+  // Call the logout function from auth context
+  logout();
+  
+  // Navigate to login page
+  navigate('/login');
+};
 
   const navItems = getNavItems();
   
