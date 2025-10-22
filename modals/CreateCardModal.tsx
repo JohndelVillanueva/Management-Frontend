@@ -241,132 +241,134 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
         </>
       )}
     >
-      {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
-      {deptError && <div className="mb-4 text-red-600 text-sm">{deptError}</div>}
-      
-      <label className="block mb-1 text-sm font-medium text-gray-700">Card Title</label>
-      <p className="text-xs text-gray-500 mb-2">Use a clear, concise name for this card.</p>
-      <input
-        className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-        type="text"
-        value={title}
-        onChange={e => setTitle(e.target.value)}
-        placeholder="Enter card title"
-        disabled={loading}
-      />
-      
-      <label className="block mb-1 text-sm font-medium text-gray-700">Description</label>
-      <p className="text-xs text-gray-500 mb-2">Describe the purpose or scope of this card (optional).</p>
-      <textarea
-        className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-        value={description}
-        onChange={e => setDescription(e.target.value)}
-        placeholder="Enter description"
-        disabled={loading}
-      />
-      
-      {/* Department field - different for HEAD vs ADMIN */}
-      <label className="block mb-1 text-sm font-medium text-gray-700">Department</label>
-      <p className="text-xs text-gray-500 mb-2">
-        {user_type === 'HEAD' 
-          ? 'This card will be created for your department.' 
-          : 'Assign this card to a department.'}
-      </p>
-      
-      {user_type === 'HEAD' ? (
-        // For HEAD users - show read-only department info
-        <div className="w-full mb-4 px-3 py-2 border rounded bg-gray-50">
-          {userDepartmentInfo ? (
-            <span className="text-gray-700">{userDepartmentInfo.name}</span>
-          ) : (
-            <span className="text-gray-500">Loading department...</span>
-          )}
-          <p className="text-xs text-gray-500 mt-1">
-            As a department head, you can only create cards for your own department.
-          </p>
-        </div>
-      ) : (
-        // For ADMIN users - show department dropdown
-        <select
+      <div>
+        {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
+        {deptError && <div className="mb-4 text-red-600 text-sm">{deptError}</div>}
+        
+        <label className="block mb-1 text-sm font-medium text-gray-700">Card Title</label>
+        <p className="text-xs text-gray-500 mb-2">Use a clear, concise name for this card.</p>
+        <input
           className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-          value={departmentId ?? ''}
-          onChange={e => setDepartmentId(Number(e.target.value))}
-          disabled={loading || departments.length === 0}
-        >
-          <option value="">Select Department</option>
-          {departments.length === 0 ? (
-            <option>No departments found</option>
-          ) : (
-            departments.map((dept) => (
-              <option key={dept.id} value={dept.id}>{dept.name}</option>
-            ))
-          )}
-        </select>
-      )}
-
-      {/* Head user dropdown - only for ADMIN users */}
-      {user_type === 'ADMIN' && headUsers.length > 0 && (
-        <>
-          <label className="block mb-1 text-sm font-medium text-gray-700">Department Head</label>
-          <p className="text-xs text-gray-500 mb-2">Optional: designate a head for this card.</p>
+          type="text"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Enter card title"
+          disabled={loading}
+        />
+        
+        <label className="block mb-1 text-sm font-medium text-gray-700">Description</label>
+        <p className="text-xs text-gray-500 mb-2">Describe the purpose or scope of this card (optional).</p>
+        <textarea
+          className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Enter description"
+          disabled={loading}
+        />
+        
+        {/* Department field - different for HEAD vs ADMIN */}
+        <label className="block mb-1 text-sm font-medium text-gray-700">Department</label>
+        <p className="text-xs text-gray-500 mb-2">
+          {user_type === 'HEAD' 
+            ? 'This card will be created for your department.' 
+            : 'Assign this card to a department.'}
+        </p>
+        
+        {user_type === 'HEAD' ? (
+          // For HEAD users - show read-only department info
+          <div className="w-full mb-4 px-3 py-2 border rounded bg-gray-50">
+            {userDepartmentInfo ? (
+              <span className="text-gray-700">{userDepartmentInfo.name}</span>
+            ) : (
+              <span className="text-gray-500">Loading department...</span>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              As a department head, you can only create cards for your own department.
+            </p>
+          </div>
+        ) : (
+          // For ADMIN users - show department dropdown
           <select
             className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-            value={selectedHeadId ?? ''}
-            onChange={e => setSelectedHeadId(Number(e.target.value))}
-            disabled={loading}
+            value={departmentId ?? ''}
+            onChange={e => setDepartmentId(Number(e.target.value))}
+            disabled={loading || departments.length === 0}
           >
-            <option value="">Select Department Head (Optional)</option>
-            {headUsers.map((head) => (
-              <option key={head.id} value={head.id}>
-                {head.first_name} {head.last_name}
-              </option>
-            ))}
+            <option value="">Select Department</option>
+            {departments.length === 0 ? (
+              <option>No departments found</option>
+            ) : (
+              departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))
+            )}
           </select>
-        </>
-      )}
+        )}
 
-      {/* For HEAD users, show message about auto-assignment */}
-      {user_type === 'HEAD' && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-sm text-blue-800">
-            <strong>Note:</strong> As the department head, you will be automatically assigned as the head of this card.
-          </p>
-        </div>
-      )}
-
-      {/* Expiration Date Section */}
-      <div className="mb-4">
-        <div className="flex items-center mb-2">
-          <input
-            type="checkbox"
-            id="includeExpiration"
-            checked={includeExpiration}
-            onChange={(e) => setIncludeExpiration(e.target.checked)}
-            className="mr-2"
-            disabled={loading}
-          />
-          <label htmlFor="includeExpiration" className="text-sm font-medium text-gray-700">
-            Set expiration date
-          </label>
-        </div>
-        <p className="text-xs text-gray-500 mb-2">Optionally set when this card should expire.</p>
-        
-        {includeExpiration && (
-          <div className="mt-2">
-            <label className="block mb-1 text-sm font-medium text-gray-700">Expiration Date</label>
-            <input
-              type="date"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              min={today}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+        {/* Head user dropdown - only for ADMIN users */}
+        {user_type === 'ADMIN' && headUsers.length > 0 && (
+          <>
+            <label className="block mb-1 text-sm font-medium text-gray-700">Department Head</label>
+            <p className="text-xs text-gray-500 mb-2">Optional: designate a head for this card.</p>
+            <select
+              className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
+              value={selectedHeadId ?? ''}
+              onChange={e => setSelectedHeadId(Number(e.target.value))}
               disabled={loading}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              The card will automatically expire after this date.
+            >
+              <option value="">Select Department Head (Optional)</option>
+              {headUsers.map((head) => (
+                <option key={head.id} value={head.id}>
+                  {head.first_name} {head.last_name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+
+        {/* For HEAD users, show message about auto-assignment */}
+        {user_type === 'HEAD' && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> As the department head, you will be automatically assigned as the head of this card.
             </p>
           </div>
         )}
+
+        {/* Expiration Date Section */}
+        <div className="mb-4">
+          <div className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id="includeExpiration"
+              checked={includeExpiration}
+              onChange={(e) => setIncludeExpiration(e.target.checked)}
+              className="mr-2"
+              disabled={loading}
+            />
+            <label htmlFor="includeExpiration" className="text-sm font-medium text-gray-700">
+              Set expiration date
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 mb-2">Optionally set when this card should expire.</p>
+          
+          {includeExpiration && (
+            <div className="mt-2">
+              <label className="block mb-1 text-sm font-medium text-gray-700">Expiration Date</label>
+              <input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                min={today}
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                The card will automatically expire after this date.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </BaseModal>
   );
