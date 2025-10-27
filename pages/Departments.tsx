@@ -30,7 +30,6 @@ const Departments = () => {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch departments
   useEffect(() => {
     fetchDepartments();
   }, []);
@@ -84,7 +83,6 @@ const Departments = () => {
         throw new Error('Failed to delete department');
       }
 
-      // Remove from local state
       setDepartments(departments.filter(dept => dept.id !== id));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete department');
@@ -116,12 +114,10 @@ const Departments = () => {
       const savedDepartment = await response.json();
       
       if (editingDepartment) {
-        // Update existing department
         setDepartments(departments.map(dept => 
           dept.id === editingDepartment.id ? savedDepartment : dept
         ));
       } else {
-        // Add new department
         setDepartments([...departments, savedDepartment]);
       }
 
@@ -141,17 +137,17 @@ const Departments = () => {
 
   if (loading) {
     return (
-      <div className="p-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="h-screen bg-gray-50 overflow-y-auto">
+        <div className="w-full p-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-10 bg-gray-200 rounded w-1/4 mb-3"></div>
+            <div className="h-5 bg-gray-200 rounded w-1/2 mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="bg-white rounded-lg shadow-sm p-8">
+                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
                 </div>
               ))}
             </div>
@@ -162,46 +158,43 @@ const Departments = () => {
   }
 
   return (
-    <div className="p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-screen bg-gray-50 overflow-y-auto overflow-x-hidden">
+      <div className="w-full p-8 min-h-full">
         {/* Header */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Departments</h1>
-            <p className="text-gray-600">Manage university departments and their settings</p>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">Departments</h1>
+            <p className="text-lg text-gray-600">Manage university departments and their settings</p>
           </div>
           <button
             onClick={handleCreateDepartment}
-            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center"
+            className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center text-base"
           >
-            <PlusIcon className="h-5 w-5 mr-2" />
+            <PlusIcon className="h-6 w-6 mr-2" />
             Add Department
           </button>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-8 text-base">
             {error}
           </div>
         )}
 
         {/* Departments Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {departments.map((department) => (
             <div key={department.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <BuildingOfficeIcon className="h-6 w-6 text-orange-600" />
+              <div className="p-8">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center flex-1">
+                    <div className="h-14 w-14 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <BuildingOfficeIcon className="h-8 w-8 text-orange-600" />
                     </div>
-                    <div className="ml-3">
-                      <h3 className="text-lg font-semibold text-gray-900">{department.name}</h3>
-                      <p className="text-sm text-orange-600 font-medium">{department.code}</p>
-                      {department.description && (
-                        <p className="text-sm text-gray-600 mt-1">{department.description}</p>
-                      )}
+                    <div className="ml-4 flex-1">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-1">{department.name}</h3>
+                      <p className="text-base text-orange-600 font-medium">{department.code}</p>
                     </div>
                   </div>
                   <div className="flex space-x-2">
@@ -210,35 +203,39 @@ const Departments = () => {
                       className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                       title="Edit department"
                     >
-                      <PencilIcon className="h-4 w-4" />
+                      <PencilIcon className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleDeleteDepartment(department.id)}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Delete department"
                     >
-                      <TrashIcon className="h-4 w-4" />
+                      <TrashIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
 
+                {department.description && (
+                  <p className="text-base text-gray-600 mb-6">{department.description}</p>
+                )}
+
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
                   <div className="flex items-center">
-                    <UserGroupIcon className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-600">
+                    <UserGroupIcon className="h-5 w-5 text-gray-400 mr-2" />
+                    <span className="text-base text-gray-600">
                       {department._count?.users || 0} users
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <DocumentTextIcon className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-600">
+                    <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-2" />
+                    <span className="text-base text-gray-600">
                       {department._count?.cards || 0} cards
                     </span>
                   </div>
                 </div>
 
-                <div className="mt-4 text-xs text-gray-500">
+                <div className="mt-6 text-sm text-gray-500">
                   Updated: {new Date(department.updated_at).toLocaleDateString()}
                 </div>
               </div>
@@ -248,18 +245,21 @@ const Departments = () => {
 
         {/* Empty State */}
         {departments.length === 0 && !loading && (
-          <div className="text-center py-6">
-            <div className="text-6xl mb-4">🏢</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No departments yet</h3>
-            <p className="text-gray-600 mb-6">Create your first department to get started</p>
+          <div className="text-center py-16">
+            <div className="text-8xl mb-6">🏢</div>
+            <h3 className="text-2xl font-medium text-gray-900 mb-3">No departments yet</h3>
+            <p className="text-lg text-gray-600 mb-8">Create your first department to get started</p>
             <button
               onClick={handleCreateDepartment}
-              className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+              className="bg-orange-600 text-white px-8 py-4 rounded-lg hover:bg-orange-700 transition-colors font-medium text-base"
             >
               Create First Department
             </button>
           </div>
         )}
+
+        {/* Bottom spacing */}
+        <div className="h-32"></div>
       </div>
 
       {/* Department Modal */}
@@ -274,4 +274,4 @@ const Departments = () => {
   );
 };
 
-export default Departments; 
+export default Departments;

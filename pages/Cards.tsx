@@ -14,7 +14,7 @@ type CardItem = {
 
 const CardsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // This is currentUser from your context
+  const { user } = useAuth();
   const [cards, setCards] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,7 +32,6 @@ const CardsPage: React.FC = () => {
       let url = 'http://localhost:3000/cards';
       const params = new URLSearchParams();
   
-      // For HEAD and STAFF - use main endpoint with departmentId filter
       if (user?.user_type === 'HEAD' || user?.user_type === 'STAFF') {
         const departmentId = (user as any).department?.id ?? (user as any).departmentId;
         if (departmentId) {
@@ -40,11 +39,9 @@ const CardsPage: React.FC = () => {
           console.log('Using main endpoint with department filter:', departmentId);
         }
       } else if (user?.user_type === 'ADMIN') {
-        // For admin, get all cards
         console.log('Using main endpoint for ADMIN (all cards)');
       }
   
-      // Add the params to URL if we have any
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
@@ -71,7 +68,6 @@ const CardsPage: React.FC = () => {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.error || errorMessage;
         } catch {
-          // If not JSON, use the text as is
           errorMessage = errorText || errorMessage;
         }
         
@@ -98,7 +94,6 @@ const CardsPage: React.FC = () => {
     setCreateError('');
     
     try {
-      // Get the token from localStorage
       const token = localStorage.getItem('token');
       console.log('Token from localStorage:', token);
       
@@ -183,42 +178,39 @@ const CardsPage: React.FC = () => {
     if (sortBy === 'title') {
       list.sort((a, b) => a.title.localeCompare(b.title));
     } else {
-      // recent: assume returned in desc created order; fallback to id desc
       list.sort((a, b) => b.id - a.id);
     }
     return list;
   }, [cards, query, deptFilter, sortBy]);
 
-  // Get user's department ID for HEAD users
   const getUserDepartmentId = () => {
     if (!user) return undefined;
     return (user as any).department?.id ?? (user as any).departmentId;
   };
 
-  // Check if user is staff (should not see create card button)
   const isStaff = user?.user_type === 'STAFF';
 
-  if (loading) return <div className="p-6 text-center text-gray-500">Loading...</div>;
-  if (error) return <div className="p-6 text-center text-red-600">{error}</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500 text-lg">Loading...</div>;
+  if (error) return <div className="p-8 text-center text-red-600 text-lg">{error}</div>;
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-screen bg-gray-50 overflow-y-auto">
+      <div className="w-full p-8">
         {/* Header & Filters */}
-        <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl font-bold text-gray-800">Cards</h1>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex flex-col gap-6 mb-8 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-4xl font-bold text-gray-800">Cards</h1>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <input
               type="text"
               placeholder="Search cards..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+              className="w-full md:w-80 border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
             />
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+              className="border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
             >
               <option value="all">All Departments</option>
               {departmentOptions.map((name) => (
@@ -227,8 +219,8 @@ const CardsPage: React.FC = () => {
             </select>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target as 'recent' | 'title')}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+              onChange={(e) => setSortBy(e.target.value as 'recent' | 'title')}
+              className="border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
             >
               <option value="recent">Most Recent</option>
               <option value="title">Title (A-Z)</option>
@@ -238,29 +230,28 @@ const CardsPage: React.FC = () => {
 
         {/* Card Grid */}
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No cards available.
-            {/* Only show create button for non-staff users when no cards */}
+          <div className="text-center py-16 text-gray-500">
+            <p className="text-xl mb-4">No cards available.</p>
             {!isStaff && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors mx-auto"
+                className="mt-6 inline-flex items-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-lg transition-colors text-base"
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusIcon className="h-6 w-6" />
                 Create Your First Card
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {/* Create Card Button as the first card - Only show for non-staff users */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+            {/* Create Card Button */}
             {!isStaff && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="text-left bg-white rounded-xl shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transform transition border-2 border-dashed border-gray-300 group flex flex-col items-center justify-center min-h-[180px] text-gray-500 hover:text-orange-600 hover:border-orange-400"
+                className="text-left bg-white rounded-xl shadow-sm p-6 hover:shadow-lg hover:-translate-y-0.5 transform transition border-2 border-dashed border-gray-300 group flex flex-col items-center justify-center min-h-[200px] text-gray-500 hover:text-orange-600 hover:border-orange-400"
               >
-                <PlusIcon className="h-12 w-12 mb-3 text-gray-400 group-hover:text-orange-500" />
-                <span className="font-medium">Create New Card</span>
+                <PlusIcon className="h-14 w-14 mb-3 text-gray-400 group-hover:text-orange-500" />
+                <span className="font-medium text-base">Create New Card</span>
               </button>
             )}
 
@@ -268,18 +259,18 @@ const CardsPage: React.FC = () => {
               <button
                 key={card.id}
                 onClick={() => navigate(`/cardDetails/${card.id}`)}
-                className="text-left bg-white rounded-xl shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transform transition border border-gray-200 group"
+                className="text-left bg-white rounded-xl shadow-sm p-6 hover:shadow-lg hover:-translate-y-0.5 transform transition border border-gray-200 group min-h-[200px] flex flex-col"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-2xl">📄</div>
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-3xl">📄</div>
+                  <span className="text-xs font-medium px-3 py-1 rounded-full bg-orange-100 text-orange-700">
                     {(card.files?.length ?? 0)} files
                   </span>
                 </div>
-                <h3 className="font-semibold text-gray-800 truncate group-hover:text-orange-600 transition-colors">
+                <h3 className="font-semibold text-lg text-gray-800 truncate group-hover:text-orange-600 transition-colors mb-2">
                   {card.title}
                 </h3>
-                <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                <div className="mt-auto text-sm text-gray-500 flex items-center gap-2">
                   <span className="inline-block h-2 w-2 rounded-full bg-gray-300" />
                   <span>{card.department?.name || 'No Department'}</span>
                 </div>
@@ -288,7 +279,7 @@ const CardsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Create Card Modal - Only show for non-staff users */}
+        {/* Create Card Modal */}
         {user && !isStaff && (
           <CreateCardModal
             open={isCreateModalOpen}
@@ -296,10 +287,13 @@ const CardsPage: React.FC = () => {
             onCreate={handleCreateCard}
             loading={createLoading}
             error={createError}
-            user_type={user.user_type as 'ADMIN' | 'HEAD'} // Cast to the expected type
-            user_department={getUserDepartmentId()} // Get department ID for HEAD users
+            user_type={user.user_type as 'ADMIN' | 'HEAD'}
+            user_department={getUserDepartmentId()}
           />
         )}
+
+        {/* Bottom spacing */}
+        <div className="h-20"></div>
       </div>
     </div>
   );
