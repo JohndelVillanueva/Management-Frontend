@@ -20,104 +20,88 @@ const HeadWelcomePage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [departmentName, setDepartmentName] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [departmentStats, setDepartmentStats] = useState({
-    totalStaff: 15,
-    activeStaff: 12,
-    pendingSubmissions: 8,
-    completedSubmissions: 45,
+    totalStaff: 0,
+    activeStaff: 0,
+    pendingSubmissions: 0,
+    completedSubmissions: 0,
     totalCards: 0,
     activeCards: 0,
+    overdueCount: 0,
+    performance: 0
   });
 
-  // Fetch department name
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
+
+  // Fetch all department data
+  const fetchDepartmentData = async () => {
+    if (!user?.departmentId) {
+      setError('No department assigned');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const [deptRes, statsRes, activityRes, deadlinesRes] = await Promise.all([
+        fetch(`http://localhost:3000/departments/${user.departmentId}`),
+        fetch(`http://localhost:3000/head/stats?departmentId=${user.departmentId}`),
+        fetch(`http://localhost:3000/head/activity?departmentId=${user.departmentId}&limit=4`),
+        fetch(`http://localhost:3000/head/deadlines?departmentId=${user.departmentId}&limit=3`)
+      ]);
+
+      if (!deptRes.ok || !statsRes.ok || !activityRes.ok || !deadlinesRes.ok) {
+        throw new Error('Failed to fetch department data');
+      }
+
+      const [dept, stats, activity, deadlines] = await Promise.all([
+        deptRes.json(),
+        statsRes.json(),
+        activityRes.json(),
+        deadlinesRes.json()
+      ]);
+
+      setDepartmentName(dept.name || "Department");
+      setDepartmentStats(stats);
+      setRecentActivity(activity);
+      setUpcomingDeadlines(deadlines);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching department data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
   useEffect(() => {
-    const fetchDepartmentName = async () => {
-      if (!user?.departmentId) {
-        setDepartmentName("Department");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `http://localhost:3000/departments/${user.departmentId}`
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          setDepartmentName(data.name || "Department");
-        } else {
-          setDepartmentName("Department");
-        }
-      } catch (error) {
-        console.error("Error fetching department:", error);
-        setDepartmentName("Department");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDepartmentName();
+    fetchDepartmentData();
   }, [user?.departmentId]);
 
-  const recentActivity = [
-    {
-      id: 1,
-      type: "submission",
-      title: "Monthly Report Submitted",
-      user: "John Doe",
-      time: "2 hours ago",
-      status: "completed",
-    },
-    {
-      id: 2,
-      type: "card",
-      title: "New Card Created",
-      user: "Admin",
-      time: "4 hours ago",
-      status: "active",
-    },
-    {
-      id: 3,
-      type: "submission",
-      title: "Student Records Updated",
-      user: "Jane Smith",
-      time: "1 day ago",
-      status: "pending",
-    },
-    {
-      id: 4,
-      type: "staff",
-      title: "New Staff Member Added",
-      user: "HR Department",
-      time: "2 days ago",
-      status: "completed",
-    },
-  ];
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!user?.departmentId) return;
 
-  const upcomingDeadlines = [
-    {
-      id: 1,
-      title: "Department Quarterly Review",
-      deadline: "2024-01-20",
-      priority: "high",
-      assignedTo: "All Staff",
-    },
-    {
-      id: 2,
-      title: "Budget Report Submission",
-      deadline: "2024-01-25",
-      priority: "high",
-      assignedTo: "Finance Team",
-    },
-    {
-      id: 3,
-      title: "Staff Performance Reviews",
-      deadline: "2024-01-30",
-      priority: "medium",
-      assignedTo: "Department Heads",
-    },
-  ];
+    const interval = setInterval(() => {
+      // Refresh stats and activity
+      fetch(`http://localhost:3000/head/stats?departmentId=${user.departmentId}`)
+        .then(res => res.json())
+        .then(data => setDepartmentStats(data))
+        .catch(console.error);
+
+      fetch(`http://localhost:3000/head/activity?departmentId=${user.departmentId}&limit=4`)
+        .then(res => res.json())
+        .then(data => setRecentActivity(data))
+        .catch(console.error);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user?.departmentId]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -158,17 +142,43 @@ const HeadWelcomePage = () => {
     }
   };
 
-  // Close sidebar when window is resized to desktop size
+  // Close sidebar when window is resized
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
         setIsSidebarOpen(false);
       }
     };
-
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  if (loading && !departmentName) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-xl text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !departmentName) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-red-600">Error: {error}</p>
+          <button 
+            onClick={fetchDepartmentData}
+            className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -219,184 +229,190 @@ const HeadWelcomePage = () => {
           </div>
         </div>
 
-        <div className="flex-1 p-4 lg:ml-0">
-          <div className="max-w-7xl mx-auto">
-            {/* Header with mobile menu button */}
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex-1">
-                <div className="flex items-center mb-2">
+        {/* Main Content */}
+        <div className="flex-1 w-full">
+          <div className="p-6">
+            {/* Header */}
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-8">
+              <div className="flex-1 mb-4 lg:mb-0">
+                <div className="flex items-center mb-3">
                   <button 
-                    className="lg:hidden p-2 rounded-lg bg-white shadow-sm mr-2"
+                    className="lg:hidden p-2 rounded-lg bg-white shadow-sm mr-3"
                     onClick={() => setIsSidebarOpen(true)}
                   >
                     <Bars3Icon className="h-6 w-6" />
                   </button>
                   <div>
-                    {loading ? (
-                      <div className="h-8 w-64 bg-gray-200 rounded animate-pulse"></div>
-                    ) : (
-                      <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
-                        {departmentName} Department
-                      </h1>
-                    )}
+                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-800">
+                      {departmentName} Department
+                    </h1>
                   </div>
                 </div>
                 
-                {/* Department Badge */}
-                <div className="flex items-center mt-2">
-                  <div className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
-                    <BuildingOfficeIcon className="h-4 w-4 mr-1" />
-                    <span className="font-medium">
-                      {loading ? "Loading..." : departmentName}
-                    </span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-3">
+                  <div className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                    <BuildingOfficeIcon className="h-5 w-5 mr-2" />
+                    <span>{departmentName}</span>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
+                    Live data updating every 30 seconds
                   </div>
                 </div>
                 
-                <p className="text-gray-600 mt-2 text-sm lg:text-base">
-                  Manage your department's activities and staff performance
+                <p className="text-gray-600 mt-3 text-base lg:text-lg max-w-3xl">
+                  Manage your department's activities and staff performance in one centralized dashboard
                 </p>
               </div>
               
-              <div className="hidden lg:block ml-4">
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-700">
-                      {user?.first_name} {user?.last_name}
-                    </p>
-                    <p className="text-xs text-gray-500">Department Head</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold">
-                    {user?.first_name?.charAt(0) || 'U'}
-                  </div>
+              <div className="flex items-center justify-between lg:justify-end lg:ml-8">
+                <div className="text-right mr-4">
+                  <p className="text-lg font-semibold text-gray-800">
+                    {user?.first_name} {user?.last_name}
+                  </p>
+                  {/* <p className="text-sm text-gray-600">Department Head</p> */}
+                  <p className="text-xs text-gray-500 mt-1">{departmentName} Department</p>
                 </div>
+                {/* <div className="h-14 w-14 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                  {user?.first_name?.charAt(0) || 'U'}
+                </div> */}
               </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
-              <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <UserGroupIcon className="h-5 w-5 text-blue-600" />
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <UserGroupIcon className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">Total Staff</p>
-                    <p className="text-xl font-bold text-gray-900">
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                    <p className="text-2xl font-bold text-gray-900">
                       {departmentStats.totalStaff}
                     </p>
-                    <p className="text-xs text-green-600">
-                      +{departmentStats.activeStaff} active
+                    <p className="text-xs text-green-600 font-medium">
+                      {departmentStats.activeStaff} active now
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                  <div className="p-3 bg-green-100 rounded-xl">
+                    <CheckCircleIcon className="h-6 w-6 text-green-600" />
                   </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Completed
-                    </p>
-                    <p className="text-xl font-bold text-gray-900">
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Completed</p>
+                    <p className="text-2xl font-bold text-gray-900">
                       {departmentStats.completedSubmissions}
                     </p>
-                    <p className="text-xs text-gray-500">This month</p>
+                    <p className="text-xs text-gray-500">Submissions</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-center">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <ClockIcon className="h-5 w-5 text-yellow-600" />
+                  <div className="p-3 bg-yellow-100 rounded-xl">
+                    <ClockIcon className="h-6 w-6 text-yellow-600" />
                   </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Pending
-                    </p>
-                    <p className="text-xl font-bold text-gray-900">
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Pending</p>
+                    <p className="text-2xl font-bold text-gray-900">
                       {departmentStats.pendingSubmissions}
                     </p>
-                    <p className="text-xs text-orange-600">Needs attention</p>
+                    <p className="text-xs text-orange-600 font-medium">Needs attention</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 lg:col-span-1 xl:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <ChartBarIcon className="h-5 w-5 text-purple-600" />
+                  <div className="p-3 bg-purple-100 rounded-xl">
+                    <ChartBarIcon className="h-6 w-6 text-purple-600" />
                   </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Performance
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Performance</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {departmentStats.performance}%
                     </p>
-                    <p className="text-xl font-bold text-gray-900">92%</p>
-                    <p className="text-xs text-green-600">+5% this month</p>
+                    <p className="text-xs text-green-600 font-medium">Completion rate</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 sm:col-span-2 lg:col-span-1 xl:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
                 <div className="flex items-center">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
+                  <div className="p-3 bg-red-100 rounded-xl">
+                    <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
                   </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Overdue Tasks
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Overdue</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {departmentStats.overdueCount}
                     </p>
-                    <p className="text-xl font-bold text-gray-900">3</p>
-                    <p className="text-xs text-red-600">Immediate action</p>
+                    <p className="text-xs text-red-600 font-medium">Immediate action</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
               {/* Recent Activity */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    Recent Activity
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <div className="space-y-3">
-                    {recentActivity.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center">
-                          {getActivityIcon(activity.type)}
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">
-                              {activity.title}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              by {activity.user} • {activity.time}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                            activity.status
-                          )}`}
-                        >
-                          {activity.status}
-                        </span>
-                      </div>
-                    ))}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-5 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      Recent Activity
+                    </h2>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      Last 24 hours
+                    </span>
                   </div>
-                  <div className="mt-4">
+                </div>
+                <div className="p-5">
+                  <div className="space-y-4">
+                    {recentActivity.length > 0 ? (
+                      recentActivity.map((activity) => (
+                        <div
+                          key={activity.id}
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center">
+                            {getActivityIcon(activity.type)}
+                            <div className="ml-4">
+                              <p className="text-base font-medium text-gray-900">
+                                {activity.title}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                by {activity.user} • {activity.time}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(
+                              activity.status
+                            )}`}
+                          >
+                            {activity.status}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <DocumentTextIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 text-lg">No recent activity</p>
+                        <p className="text-gray-400 text-sm mt-1">Activity will appear here as it happens</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-6">
                     <button
                       onClick={() => navigate("/reports")}
-                      className="w-full text-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="w-full py-3 px-4 border-2 border-gray-300 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
                     >
                       View All Activity
                     </button>
@@ -405,46 +421,59 @@ const HeadWelcomePage = () => {
               </div>
 
               {/* Upcoming Deadlines */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    Upcoming Deadlines
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <div className="space-y-3">
-                    {upcomingDeadlines.map((deadline) => (
-                      <div
-                        key={deadline.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex items-center">
-                          <ClockIcon className="h-5 w-5 text-gray-400 mr-3" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {deadline.title}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Due: {deadline.deadline} • {deadline.assignedTo}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(
-                            deadline.priority
-                          )}`}
-                        >
-                          {deadline.priority}
-                        </span>
-                      </div>
-                    ))}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-5 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      Upcoming Deadlines
+                    </h2>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      Next 7 days
+                    </span>
                   </div>
-                  <div className="mt-4">
+                </div>
+                <div className="p-5">
+                  <div className="space-y-4">
+                    {upcomingDeadlines.length > 0 ? (
+                      upcomingDeadlines.map((deadline) => (
+                        <div
+                          key={deadline.id}
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-center">
+                            <ClockIcon className="h-5 w-5 text-gray-400 mr-4" />
+                            <div>
+                              <p className="text-base font-medium text-gray-900">
+                                {deadline.title}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                Due: {deadline.deadline} • {deadline.assignedTo}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`px-3 py-1 text-sm font-medium rounded-full ${getPriorityColor(
+                              deadline.priority
+                            )}`}
+                          >
+                            {deadline.priority}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <ClockIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 text-lg">No upcoming deadlines</p>
+                        <p className="text-gray-400 text-sm mt-1">All caught up for now</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-6">
                     <button
                       onClick={() => navigate("/staff")}
-                      className="w-full text-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="w-full py-3 px-4 border-2 border-gray-300 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
                     >
-                      Manage Staff
+                      Manage Staff & Deadlines
                     </button>
                   </div>
                 </div>
@@ -452,41 +481,44 @@ const HeadWelcomePage = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-800 mb-3">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">
                 Quick Actions
               </h2>
-              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <button
                   onClick={() => navigate("/staff")}
-                  className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 group"
                 >
-                  <UserGroupIcon className="h-5 w-5 text-blue-600 mr-2" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Staff
+                  <UserGroupIcon className="h-6 w-6 text-blue-600 mr-3 group-hover:scale-110 transition-transform" />
+                  <span className="text-base font-semibold text-gray-900">
+                    Staff Management
                   </span>
                 </button>
                 <button
                   onClick={() => navigate("/reports")}
-                  className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:bg-green-50 hover:border-green-300 transition-all duration-200 group"
                 >
-                  <ChartBarIcon className="h-5 w-5 text-green-600 mr-2" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Reports
+                  <ChartBarIcon className="h-6 w-6 text-green-600 mr-3 group-hover:scale-110 transition-transform" />
+                  <span className="text-base font-semibold text-gray-900">
+                    Reports & Analytics
                   </span>
                 </button>
                 <button
                   onClick={() => navigate("/cards")}
-                  className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:bg-orange-50 hover:border-orange-300 transition-all duration-200 group"
                 >
-                  <FolderIcon className="h-5 w-5 text-orange-600 mr-2" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Cards
+                  <FolderIcon className="h-6 w-6 text-orange-600 mr-3 group-hover:scale-110 transition-transform" />
+                  <span className="text-base font-semibold text-gray-900">
+                    Card Management
                   </span>
                 </button>
-                <button className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <DocumentTextIcon className="h-5 w-5 text-purple-600 mr-2" />
-                  <span className="text-sm font-medium text-gray-900">
+                <button 
+                  onClick={() => navigate("/reports/create")}
+                  className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 group"
+                >
+                  <DocumentTextIcon className="h-6 w-6 text-purple-600 mr-3 group-hover:scale-110 transition-transform" />
+                  <span className="text-base font-semibold text-gray-900">
                     Create Report
                   </span>
                 </button>
