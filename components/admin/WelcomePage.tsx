@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 const CardSubmissionAnalytics = () => {
   const [submissionStats, setSubmissionStats] = useState({
@@ -7,14 +7,14 @@ const CardSubmissionAnalytics = () => {
     pending: 0,
     overdue: 0,
     completionRate: 0,
-    avgSubmissionTime: '0 days'
+    avgSubmissionTime: "0 days",
   });
 
   const [realtimeMetrics, setRealtimeMetrics] = useState({
     activeTeachers: 0,
     submittedToday: 0,
     pendingNow: 0,
-    dueToday: 0
+    dueToday: 0,
   });
 
   const [myCards, setMyCards] = useState([]);
@@ -24,53 +24,65 @@ const CardSubmissionAnalytics = () => {
   const [error, setError] = useState(null);
 
   // Fetch all data
-  const fetchData = async () => {
-    try {
-      const [statsRes, realtimeRes, cardsRes, deptRes, activityRes] = await Promise.all([
-        fetch('http://localhost:3000/activities/stats/overview'),
-        fetch('http://localhost:3000/activities/stats/realtime'),
-        fetch('http://localhost:3000/activities/cards'),
-        fetch('http://localhost:3000/activities/stats/departments'),
-        fetch('http://localhost:3000/activities/recent?limit=8')
-      ]);
-
-      if (!statsRes.ok || !realtimeRes.ok || !cardsRes.ok || !deptRes.ok || !activityRes.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const [stats, realtime, cards, dept, activity] = await Promise.all([
-        statsRes.json(),
-        realtimeRes.json(),
-        cardsRes.json(),
-        deptRes.json(),
-        activityRes.json()
-      ]);
-
-      setSubmissionStats(stats);
-      setRealtimeMetrics(realtime);
-      setMyCards(cards);
-      setDepartmentStats(dept);
-      setRecentActivity(activity);
-      setLoading(false);
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
+const fetchData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
     }
-  };
+
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+
+    const [statsRes, realtimeRes, cardsRes, deptRes, activityRes] = await Promise.all([
+      fetch('http://localhost:3000/activities/stats/overview', { headers }),
+      fetch('http://localhost:3000/activities/stats/realtime', { headers }),
+      fetch('http://localhost:3000/cards/analytics/cards', { headers }), // Updated URL with auth
+      fetch('http://localhost:3000/activities/stats/departments', { headers }),
+      fetch('http://localhost:3000/activities/recent?limit=8', { headers })
+    ]);
+
+    if (!statsRes.ok || !realtimeRes.ok || !cardsRes.ok || !deptRes.ok || !activityRes.ok) {
+      throw new Error('Failed to fetch data');
+    }
+
+    const [stats, realtime, cards, dept, activity] = await Promise.all([
+      statsRes.json(),
+      realtimeRes.json(),
+      cardsRes.json(),
+      deptRes.json(),
+      activityRes.json()
+    ]);
+
+    setSubmissionStats(stats);
+    setRealtimeMetrics(realtime);
+    setMyCards(cards);
+    setDepartmentStats(dept);
+    setRecentActivity(activity);
+    setLoading(false);
+  } catch (err) {
+    console.error('Fetch error:', err);
+    setError(err.message);
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchData();
 
     // Refresh realtime metrics and activity every 10 seconds
     const interval = setInterval(() => {
-      fetch('/api/admin/stats/realtime')
-        .then(res => res.json())
-        .then(data => setRealtimeMetrics(data))
+      fetch("/api/admin/stats/realtime")
+        .then((res) => res.json())
+        .then((data) => setRealtimeMetrics(data))
         .catch(console.error);
 
-      fetch('/api/admin/activities/recent?limit=8')
-        .then(res => res.json())
-        .then(data => setRecentActivity(data))
+      fetch("/api/admin/activities/recent?limit=8")
+        .then((res) => res.json())
+        .then((data) => setRecentActivity(data))
         .catch(console.error);
     }, 10000);
 
@@ -79,24 +91,33 @@ const CardSubmissionAnalytics = () => {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'Urgent': return 'text-red-600 bg-red-100 border-red-300';
-      case 'High': return 'text-orange-600 bg-orange-100 border-orange-300';
-      case 'Medium': return 'text-yellow-600 bg-yellow-100 border-yellow-300';
-      default: return 'text-gray-600 bg-gray-100 border-gray-300';
+      case "Urgent":
+        return "text-red-600 bg-red-100 border-red-300";
+      case "High":
+        return "text-orange-600 bg-orange-100 border-orange-300";
+      case "Medium":
+        return "text-yellow-600 bg-yellow-100 border-yellow-300";
+      default:
+        return "text-gray-600 bg-gray-100 border-gray-300";
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Completed': return 'text-green-600 bg-green-100 border-green-300';
-      case 'In Progress': return 'text-blue-600 bg-blue-100 border-blue-300';
-      case 'Pending': return 'text-orange-600 bg-orange-100 border-orange-300';
-      case 'Overdue': return 'text-red-600 bg-red-100 border-red-300';
-      default: return 'text-gray-600 bg-gray-100 border-gray-300';
+      case "Completed":
+        return "text-green-600 bg-green-100 border-green-300";
+      case "In Progress":
+        return "text-blue-600 bg-blue-100 border-blue-300";
+      case "Pending":
+        return "text-orange-600 bg-orange-100 border-orange-300";
+      case "Overdue":
+        return "text-red-600 bg-red-100 border-red-300";
+      default:
+        return "text-gray-600 bg-gray-100 border-gray-300";
     }
   };
 
-  const MetricCard = ({ title, value, subtitle, icon, color = 'orange' }) => (
+  const MetricCard = ({ title, value, subtitle, icon, color = "orange" }) => (
     <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -104,9 +125,7 @@ const CardSubmissionAnalytics = () => {
           <h3 className="text-4xl font-bold text-gray-800">{value}</h3>
           {subtitle && <p className="text-sm text-gray-500 mt-2">{subtitle}</p>}
         </div>
-        <div className={`bg-${color}-100 p-4 rounded-lg text-3xl`}>
-          {icon}
-        </div>
+        <div className={`bg-${color}-100 p-4 rounded-lg text-3xl`}>{icon}</div>
       </div>
     </div>
   );
@@ -118,15 +137,17 @@ const CardSubmissionAnalytics = () => {
         <span className="text-orange-500 animate-pulse text-2xl">●</span>
       </div>
       <div className="flex items-baseline">
-        <span className="text-4xl font-bold" style={{ color }}>{value}</span>
+        <span className="text-4xl font-bold" style={{ color }}>
+          {value}
+        </span>
         <span className="text-base text-gray-500 ml-2">{unit}</span>
       </div>
       <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
-        <div 
+        <div
           className="h-full transition-all duration-500"
-          style={{ 
-            width: `${typeof value === 'number' ? Math.min(value, 100) : 50}%`,
-            backgroundColor: color
+          style={{
+            width: `${typeof value === "number" ? Math.min(value, 100) : 50}%`,
+            backgroundColor: color,
           }}
         />
       </div>
@@ -149,7 +170,7 @@ const CardSubmissionAnalytics = () => {
       <div className="h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-red-600">Error: {error}</p>
-          <button 
+          <button
             onClick={fetchData}
             className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
           >
@@ -167,12 +188,16 @@ const CardSubmissionAnalytics = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-gray-800">Card Submission Analytics</h1>
-              <p className="text-lg text-gray-600 mt-2">Administrator Dashboard • All Departments</p>
+              {/* <h1 className="text-4xl font-bold text-gray-800">Card Submission Analytics</h1> */}
+              <p className="text-lg text-gray-600 mt-2">
+                Administrator Dashboard • All Departments
+              </p>
             </div>
             <div className="bg-orange-100 px-6 py-3 rounded-lg">
               <p className="text-base text-gray-600">Overall Completion</p>
-              <p className="text-3xl font-bold text-orange-700">{submissionStats.completionRate}%</p>
+              <p className="text-3xl font-bold text-orange-700">
+                {submissionStats.completionRate}%
+              </p>
             </div>
           </div>
         </div>
@@ -180,34 +205,36 @@ const CardSubmissionAnalytics = () => {
         {/* Real-time Metrics */}
         <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold text-gray-800">Live Submission Activity</h2>
+            <h2 className="text-2xl font-semibold text-gray-800">
+              Live Submission Activity
+            </h2>
             <span className="flex items-center text-base text-gray-600">
               <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-2"></span>
               Updating in real-time
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <RealtimeMetricCard 
-              title="Active Teachers" 
-              value={realtimeMetrics.activeTeachers} 
+            <RealtimeMetricCard
+              title="Active Teachers"
+              value={realtimeMetrics.activeTeachers}
               unit="online now"
               color="#f59e0b"
             />
-            <RealtimeMetricCard 
-              title="Submitted Today" 
-              value={realtimeMetrics.submittedToday} 
+            <RealtimeMetricCard
+              title="Submitted Today"
+              value={realtimeMetrics.submittedToday}
               unit="cards"
               color="#10b981"
             />
-            <RealtimeMetricCard 
-              title="Pending Department-Wide" 
-              value={realtimeMetrics.pendingNow} 
+            <RealtimeMetricCard
+              title="Pending Department-Wide"
+              value={realtimeMetrics.pendingNow}
               unit="cards"
               color="#f59e0b"
             />
-            <RealtimeMetricCard 
-              title="Due Today" 
-              value={realtimeMetrics.dueToday} 
+            <RealtimeMetricCard
+              title="Due Today"
+              value={realtimeMetrics.dueToday}
               unit="cards"
               color="#ef4444"
             />
@@ -216,27 +243,27 @@ const CardSubmissionAnalytics = () => {
 
         {/* My Submission Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          <MetricCard 
-            title="Total Cards Posted" 
+          <MetricCard
+            title="Total Cards Posted"
             value={submissionStats.totalCards}
             subtitle="Cards in the system"
             icon="📋"
           />
-          <MetricCard 
-            title="Completed" 
+          <MetricCard
+            title="Completed"
             value={submissionStats.submitted}
             subtitle="All staff submitted"
             icon="✅"
             color="green"
           />
-          <MetricCard 
-            title="In Progress" 
+          <MetricCard
+            title="In Progress"
             value={submissionStats.pending}
             subtitle="Awaiting submissions"
             icon="⏳"
           />
-          <MetricCard 
-            title="Overdue" 
+          <MetricCard
+            title="Overdue"
             value={submissionStats.overdue}
             subtitle="Past deadline"
             icon="⚠️"
@@ -246,17 +273,31 @@ const CardSubmissionAnalytics = () => {
 
         {/* My Cards Table */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-6">All Posted Cards</h3>
+          <h3 className="text-2xl font-semibold text-gray-800 mb-6">
+            All Posted Cards
+          </h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">Card Title</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">Posted By</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">Deadline</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">Priority</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">Submissions</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Card Title
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Posted By
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Deadline
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Priority
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Submissions
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -265,32 +306,64 @@ const CardSubmissionAnalytics = () => {
                     <tr key={card.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <span className="text-orange-500 mr-3 text-2xl">📄</span>
-                          <span className="font-medium text-gray-800 text-base">{card.title}</span>
+                          <span className="text-orange-500 mr-3 text-2xl">
+                            📄
+                          </span>
+                          <span className="font-medium text-gray-800 text-base">
+                            {card.title}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-base text-gray-600">{card.postedBy}</td>
-                      <td className="px-6 py-4 text-base text-gray-600">{card.deadline}</td>
+                      <td className="px-6 py-4 text-base text-gray-600">
+                        {card.postedBy}
+                      </td>
+                      <td className="px-6 py-4 text-base text-gray-600">
+                        {card.deadline}
+                      </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-sm rounded-full border ${getPriorityColor(card.priority)}`}>
+                        <span
+                          className={`px-3 py-1 text-sm rounded-full border ${getPriorityColor(
+                            card.priority
+                          )}`}
+                        >
                           {card.priority}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="text-base font-medium text-gray-800">
-                            {card.submissions} / {card.totalStaff}
+                            {card.submissions} /{" "}
+                            {card.totalStaff > 0 ? card.totalStaff : "N/A"}
                           </span>
                           <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                            <div 
+                            <div
                               className="bg-orange-500 h-2 rounded-full transition-all"
-                              style={{ width: `${card.totalStaff > 0 ? (card.submissions / card.totalStaff) * 100 : 0}%` }}
+                              style={{
+                                width: `${
+                                  card.totalStaff > 0
+                                    ? Math.min(
+                                        (card.submissions / card.totalStaff) *
+                                          100,
+                                        100
+                                      )
+                                    : 0
+                                }%`,
+                              }}
                             />
                           </div>
+                          {(!card.totalStaff || card.totalStaff === 0) && (
+                            <span className="text-xs text-gray-500 mt-1">
+                              No staff in department
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-sm rounded-full border ${getStatusColor(card.status)}`}>
+                        <span
+                          className={`px-3 py-1 text-sm rounded-full border ${getStatusColor(
+                            card.status
+                          )}`}
+                        >
                           {card.status}
                         </span>
                       </td>
@@ -298,7 +371,10 @@ const CardSubmissionAnalytics = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="6"
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
                       No cards found
                     </td>
                   </tr>
@@ -312,41 +388,73 @@ const CardSubmissionAnalytics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* My Status Breakdown */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6">Overall Status Breakdown</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-6">
+              Overall Status Breakdown
+            </h3>
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">Completed</span>
-                  <span className="font-semibold text-green-600">{submissionStats.submitted}</span>
+                  <span className="font-semibold text-green-600">
+                    {submissionStats.submitted}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div 
+                  <div
                     className="bg-green-500 h-4 rounded-full transition-all"
-                    style={{ width: `${submissionStats.totalCards > 0 ? (submissionStats.submitted / submissionStats.totalCards) * 100 : 0}%` }}
+                    style={{
+                      width: `${
+                        submissionStats.totalCards > 0
+                          ? (submissionStats.submitted /
+                              submissionStats.totalCards) *
+                            100
+                          : 0
+                      }%`,
+                    }}
                   />
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">In Progress</span>
-                  <span className="font-semibold text-orange-600">{submissionStats.pending}</span>
+                  <span className="font-semibold text-orange-600">
+                    {submissionStats.pending}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div 
+                  <div
                     className="bg-orange-500 h-4 rounded-full transition-all"
-                    style={{ width: `${submissionStats.totalCards > 0 ? (submissionStats.pending / submissionStats.totalCards) * 100 : 0}%` }}
+                    style={{
+                      width: `${
+                        submissionStats.totalCards > 0
+                          ? (submissionStats.pending /
+                              submissionStats.totalCards) *
+                            100
+                          : 0
+                      }%`,
+                    }}
                   />
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">Overdue</span>
-                  <span className="font-semibold text-red-600">{submissionStats.overdue}</span>
+                  <span className="font-semibold text-red-600">
+                    {submissionStats.overdue}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div 
+                  <div
                     className="bg-red-500 h-4 rounded-full transition-all"
-                    style={{ width: `${submissionStats.totalCards > 0 ? (submissionStats.overdue / submissionStats.totalCards) * 100 : 0}%` }}
+                    style={{
+                      width: `${
+                        submissionStats.totalCards > 0
+                          ? (submissionStats.overdue /
+                              submissionStats.totalCards) *
+                            100
+                          : 0
+                      }%`,
+                    }}
                   />
                 </div>
               </div>
@@ -355,49 +463,68 @@ const CardSubmissionAnalytics = () => {
 
           {/* Department Comparison */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6">Department Completion Rates</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-6">
+              Department Completion Rates
+            </h3>
             <div className="space-y-6">
               {departmentStats.length > 0 ? (
                 departmentStats.map((dept, idx) => (
                   <div key={idx}>
                     <div className="flex justify-between text-base mb-2">
                       <span className="text-gray-600">{dept.department}</span>
-                      <span className="font-semibold text-orange-600">{dept.rate}%</span>
+                      <span className="font-semibold text-orange-600">
+                        {dept.rate}%
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
+                      <div
                         className="bg-orange-500 h-3 rounded-full transition-all"
                         style={{ width: `${dept.rate}%` }}
                       />
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{dept.submitted} / {dept.total} cards</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {dept.submitted} / {dept.total} cards
+                    </p>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-4">No department data</p>
+                <p className="text-center text-gray-500 py-4">
+                  No department data
+                </p>
               )}
             </div>
           </div>
 
           {/* Recent Activity */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6">Recent Submissions</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-6">
+              Recent Submissions
+            </h3>
             <div className="space-y-4">
               {recentActivity.length > 0 ? (
                 recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 pb-4 border-b last:border-b-0">
+                  <div
+                    key={activity.id}
+                    className="flex items-start space-x-3 pb-4 border-b last:border-b-0"
+                  >
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-green-600 text-base">✓</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-base text-gray-800 font-medium truncate">{activity.teacher}</p>
-                      <p className="text-sm text-gray-600">{activity.action} • {activity.card}</p>
+                      <p className="text-base text-gray-800 font-medium truncate">
+                        {activity.teacher}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {activity.action} • {activity.card}
+                      </p>
                       <p className="text-sm text-gray-500">{activity.time}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-4">No recent activity</p>
+                <p className="text-center text-gray-500 py-4">
+                  No recent activity
+                </p>
               )}
             </div>
           </div>

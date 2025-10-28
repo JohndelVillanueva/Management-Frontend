@@ -89,69 +89,67 @@ const CardsPage: React.FC = () => {
     fetchCards();
   }, [user]);
 
-  const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null) => {
-    setCreateLoading(true);
-    setCreateError('');
+const handleCreateCard = async (title: string, description: string, departmentId: number, headId: number | null, expiresAt: Date | null) => {
+  setCreateLoading(true);
+  setCreateError('');
+  
+  try {
+    const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token);
     
-    try {
-      const token = localStorage.getItem('token');
-      console.log('Token from localStorage:', token);
-      
-      if (!token) {
-        setCreateError('No authentication token found. Please log in again.');
-        setCreateLoading(false);
-        return false;
-      }
-
-      const requestBody: any = {
-        title,
-        description,
-        departmentId,
-      };
-
-      if (headId) requestBody.headId = headId;
-
-      console.log('Sending request with headers:', {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      });
-
-      const response = await fetch('http://localhost:3000/cards', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      console.log('Response status:', response.status);
-      
-      if (response.ok) {
-        const createdCard = await response.json();
-        console.log('Created card:', createdCard);
-        await fetchCards();
-        setCreateLoading(false);
-        return true;
-      } else {
-        const errorText = await response.text();
-        console.error('Error response text:', errorText);
-        try {
-          const errorData = JSON.parse(errorText);
-          setCreateError(errorData.error || 'Failed to create card');
-        } catch {
-          setCreateError('Failed to create card');
-        }
-        setCreateLoading(false);
-        return false;
-      }
-    } catch (error) {
-      console.error('Network error:', error);
-      setCreateError('Network error occurred');
+    if (!token) {
+      setCreateError('No authentication token found. Please log in again.');
       setCreateLoading(false);
       return false;
     }
-  };
+
+    const requestBody: any = {
+      title,
+      description,
+      departmentId,
+    };
+
+    if (headId) requestBody.headId = headId;
+    if (expiresAt) requestBody.expiresAt = expiresAt.toISOString(); // Add this line
+
+    console.log('Sending request with body:', requestBody);
+
+    const response = await fetch('http://localhost:3000/cards', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log('Response status:', response.status);
+    
+    if (response.ok) {
+      const createdCard = await response.json();
+      console.log('Created card:', createdCard);
+      await fetchCards();
+      setCreateLoading(false);
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.error('Error response text:', errorText);
+      try {
+        const errorData = JSON.parse(errorText);
+        setCreateError(errorData.error || 'Failed to create card');
+      } catch {
+        setCreateError('Failed to create card');
+      }
+      setCreateLoading(false);
+      return false;
+    }
+  } catch (error) {
+    console.error('Network error:', error);
+    setCreateError('Network error occurred');
+    setCreateLoading(false);
+    return false;
+  }
+};
 
   const departmentOptions = useMemo(() => {
     const set = new Set<string>();
