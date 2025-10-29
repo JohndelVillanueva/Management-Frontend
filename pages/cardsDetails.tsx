@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { 
-  ArrowUpTrayIcon, 
-  ArrowLeftIcon, 
-  EyeIcon, 
+import {
+  ArrowUpTrayIcon,
+  ArrowLeftIcon,
+  EyeIcon,
   DocumentArrowDownIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
@@ -20,7 +20,7 @@ import "react-toastify/dist/ReactToastify.css";
 const CardDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [card, setCard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,15 +36,28 @@ const CardDetails = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
-      
+
       setLoading(true);
       try {
         const cardRes = await fetch(`http://localhost:3000/cards/${id}`);
         if (cardRes.ok) {
           const cardData = await cardRes.json();
           console.log('Card data received:', cardData);
-          setCard(cardData);
-          
+
+          // Process the card data to handle departments array
+          const processedCard = {
+            ...cardData,
+            // For display, use the first department or show multiple
+            displayDepartment: cardData.departments && cardData.departments.length > 0
+              ? cardData.departments[0].department
+              : null,
+            departmentNames: cardData.departments && cardData.departments.length > 0
+              ? cardData.departments.map((cd: any) => cd.department.name).join(', ')
+              : 'No Department'
+          };
+
+          setCard(processedCard);
+
           if (cardData.files && Array.isArray(cardData.files)) {
             setFiles(cardData.files);
           } else {
@@ -64,7 +77,7 @@ const CardDetails = () => {
         setLoading(false);
       }
     };
-  
+
     fetchData();
   }, [id]);
 
@@ -77,23 +90,25 @@ const CardDetails = () => {
       formData.append("title", uploadData.title);
       formData.append("description", uploadData.description || "");
       formData.append("type", "Document");
-      if (card?.department?.id) {
-        formData.append("departmentId", card.department.id);
+
+      // Use the first department for submission if available
+      if (card?.displayDepartment?.id) {
+        formData.append("departmentId", card.displayDepartment.id);
       }
 
       const token = localStorage.getItem('token');
       const headers: HeadersInit = {};
-      
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
       const response = await fetch(`http://localhost:3000/submissions/${id}`, {
-        method: "POST", 
+        method: "POST",
         headers,
-        body: formData 
+        body: formData
       });
-      
+
       if (!response.ok) {
         let errorText;
         try {
@@ -104,22 +119,34 @@ const CardDetails = () => {
         }
         throw new Error(errorText || `Upload failed with status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log('Upload successful:', result);
-      
+
       toast.success('File uploaded successfully!');
-      
+
       // Refresh the card data to get updated files
       const cardRes = await fetch(`http://localhost:3000/cards/${id}`);
       if (cardRes.ok) {
         const cardData = await cardRes.json();
-        setCard(cardData);
+
+        // Process the card data again
+        const processedCard = {
+          ...cardData,
+          displayDepartment: cardData.departments && cardData.departments.length > 0
+            ? cardData.departments[0].department
+            : null,
+          departmentNames: cardData.departments && cardData.departments.length > 0
+            ? cardData.departments.map((cd: any) => cd.department.name).join(', ')
+            : 'No Department'
+        };
+
+        setCard(processedCard);
         if (cardData.files && Array.isArray(cardData.files)) {
           setFiles(cardData.files);
         }
       }
-      
+
       return true;
     } catch (err: any) {
       console.error('Upload error:', err);
@@ -178,7 +205,7 @@ const CardDetails = () => {
   // Filtered and sorted files
   const filteredFiles = useMemo(() => {
     let list = files.slice();
-    
+
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter((f) => {
@@ -188,14 +215,14 @@ const CardDetails = () => {
         return name.includes(q) || type.includes(q) || owner.includes(q);
       });
     }
-    
+
     if (typeFilter !== "all") {
       list = list.filter((f) => String(f?.type || "") === typeFilter);
     }
-    
+
     list.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case "name":
           comparison = String(a?.name || "").localeCompare(String(b?.name || ""));
@@ -213,10 +240,10 @@ const CardDetails = () => {
           comparison = new Date(a?.updatedAt || 0).getTime() - new Date(b?.updatedAt || 0).getTime();
           break;
       }
-      
+
       return sortDirection === "asc" ? comparison : -comparison;
     });
-    
+
     return list;
   }, [files, query, typeFilter, sortBy, sortDirection]);
 
@@ -230,7 +257,7 @@ const CardDetails = () => {
       }
 
       const fileUrl = `http://localhost:3000${file.path}`;
-      
+
       if (action === 'view') {
         window.open(fileUrl, '_blank');
       } else if (action === 'download') {
@@ -280,7 +307,7 @@ const CardDetails = () => {
 
   return (
     <div>
-      <ToastContainer 
+      <ToastContainer
         position="bottom-right"
         autoClose={5000}
         hideProgressBar={false}
@@ -292,7 +319,7 @@ const CardDetails = () => {
         pauseOnHover
         theme="light"
       />
-      
+
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-6 py-6">
@@ -307,7 +334,7 @@ const CardDetails = () => {
                   <span className="text-sm font-medium">Back to Cards</span>
                 </button>
               </div>
-              
+
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-orange-100 rounded-xl">
                   <DocumentTextIcon className="h-8 w-8 text-orange-600" />
@@ -319,11 +346,11 @@ const CardDetails = () => {
                   <p className="text-lg text-gray-600 mb-4 max-w-3xl">
                     {card.description || 'No description provided'}
                   </p>
-                  
+
                   <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
                       <UserIcon className="h-4 w-4" />
-                      <span className="font-medium text-gray-700">{card.department?.name || 'No Department'}</span>
+                      <span className="font-medium text-gray-700">{card.departmentNames}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <CalendarIcon className="h-4 w-4" />
@@ -342,7 +369,7 @@ const CardDetails = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => setModalOpen(true)}
@@ -372,21 +399,20 @@ const CardDetails = () => {
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
               />
             </div>
-            
+
             {/* Filter Toggle */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
-                  showFilters 
-                    ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm' 
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${showFilters
+                    ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:shadow-sm'
-                }`}
+                  }`}
               >
                 <FunnelIcon className="h-5 w-5" />
                 <span className="font-medium">Filters</span>
               </button>
-              
+
               {/* Quick Stats */}
               <div className="flex items-center gap-4">
                 <div className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
@@ -395,7 +421,7 @@ const CardDetails = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Expanded Filters */}
           {showFilters && (
             <div className="mt-6 pt-6 border-t border-gray-200">
@@ -414,7 +440,7 @@ const CardDetails = () => {
                       ))}
                     </select>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Sort by:</label>
                     <select
@@ -429,7 +455,7 @@ const CardDetails = () => {
                     </select>
                   </div>
                 </div>
-                
+
                 <button
                   onClick={() => {
                     setQuery("");
@@ -533,8 +559,8 @@ const CardDetails = () => {
                     {query || typeFilter !== "all" ? "No files match your filters" : "No files uploaded yet"}
                   </p>
                   <p className="text-gray-600 mb-6 max-w-md">
-                    {query || typeFilter !== "all" 
-                      ? "Try adjusting your search or filters to find what you're looking for." 
+                    {query || typeFilter !== "all"
+                      ? "Try adjusting your search or filters to find what you're looking for."
                       : "Get started by uploading your first file to this card."
                     }
                   </p>
@@ -637,10 +663,10 @@ const CardDetails = () => {
       </div>
 
       {/* Upload modal */}
-      <UploadFileModal 
-        isOpen={modalOpen} 
-        onClose={() => setModalOpen(false)} 
-        onSubmit={handleUpload} 
+      <UploadFileModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleUpload}
         uploading={uploading}
         allowedFileTypes={card?.allowedFileTypes ? card.allowedFileTypes.split(',') : ['*']}
       />

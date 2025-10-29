@@ -21,7 +21,7 @@ interface CreateCardModalProps {
   onCreate: (
     title: string, 
     description: string, 
-    departmentId: number | 'ALL', 
+    departmentIds: number[] | 'ALL', // Updated to departmentIds
     headId: number | null, 
     expiresAt: Date | null,
     allowedFileTypes: string[]
@@ -56,7 +56,8 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [departmentId, setDepartmentId] = useState<number | 'ALL' | null>(null);
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<number[]>([]); // Changed to array
+  const [isAllDepartments, setIsAllDepartments] = useState(false); // New state for ALL
   const [deptError, setDeptError] = useState('');
   const [headUsers, setHeadUsers] = useState<HeadUser[]>([]);
   const [selectedHeadId, setSelectedHeadId] = useState<number | null>(null);
@@ -67,8 +68,19 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
 
   useEffect(() => {
     if (open) {
+      // Reset form state when opening
+      setTitle('');
+      setDescription('');
+      setSelectedDepartmentIds([]);
+      setIsAllDepartments(false);
       setDeptError('');
-      
+      setHeadUsers([]);
+      setSelectedHeadId(null);
+      setExpiresAt('');
+      setIncludeExpiration(false);
+      setUserDepartmentInfo(null);
+      setAllowedFileTypes(['*']);
+
       const token = localStorage.getItem('token');
       if (!token) {
         toast.error('Authentication token not found. Please log in again.');
@@ -88,48 +100,51 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
               if (res.status === 401) {
                 throw new Error('Authentication failed. Please log in again.');
               }
-              throw new Error('Failed to fetch department');
+              if (res.status === 500) {
+                throw new Error('Server error while fetching department');
+              }
+              throw new Error(`Failed to fetch department: ${res.status}`);
             }
             return res.json();
           })
           .then(data => {
             setUserDepartmentInfo(data);
-            setDepartmentId(user_department);
+            setSelectedDepartmentIds([user_department]); // Set as single department in array
             setDepartments([data]);
           })
           .catch((err) => {
+            console.error('Department fetch error:', err);
             const errorMsg = err.message || 'Could not load department information.';
             setDeptError(errorMsg);
             toast.error(errorMsg);
             setUserDepartmentInfo(null);
-            setDepartmentId(null);
+            setSelectedDepartmentIds([]);
           });
       } else if (user_type === 'ADMIN') {
         // For ADMIN users, fetch all departments
         fetch('http://localhost:3000/departments', { headers })
           .then(res => {
             if (!res.ok) {
-              if (res.status === 401) {
-                throw new Error('Authentication failed. Please log in again.');
-              }
-              throw new Error('Failed to fetch departments');
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
             }
             return res.json();
           })
           .then(data => {
+            console.log('Departments data:', data);
             setDepartments(data);
-            setDepartmentId(null);
+            setSelectedDepartmentIds([]);
           })
           .catch((err) => {
+            console.error('Departments fetch error:', err);
             const errorMsg = err.message || 'Could not load departments.';
             setDeptError(errorMsg);
             toast.error(errorMsg);
             setDepartments([]);
-            setDepartmentId(null);
+            setSelectedDepartmentIds([]);
           });
       }
       
-      // Fetch head users (only for ADMIN, as HEAD will be auto-assigned)
+      // Fetch head users (only for ADMIN)
       if (user_type === 'ADMIN') {
         fetch('http://localhost:3000/auth/heads', { headers })
           .then(res => {
@@ -152,22 +167,10 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             setSelectedHeadId(null);
           });
       } else {
-        // For HEAD users, clear head users list since they'll be auto-assigned
+        // For HEAD users, clear head users list
         setHeadUsers([]);
         setSelectedHeadId(null);
       }
-    }
-    if (!open) {
-      setTitle('');
-      setDescription('');
-      setDepartmentId(null);
-      setDeptError('');
-      setHeadUsers([]);
-      setSelectedHeadId(null);
-      setExpiresAt('');
-      setIncludeExpiration(false);
-      setUserDepartmentInfo(null);
-      setAllowedFileTypes(['*']);
     }
   }, [open, user_type, user_department]);
 
@@ -180,20 +183,56 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
 
   if (!open) return null;
 
+  const handleDepartmentToggle = (departmentId: number) => {
+    if (selectedDepartmentIds.includes(departmentId)) {
+      // Remove department
+      setSelectedDepartmentIds(selectedDepartmentIds.filter(id => id !== departmentId));
+    } else {
+      // Add department
+      setSelectedDepartmentIds([...selectedDepartmentIds, departmentId]);
+    }
+  };
+
+  const handleSelectAllDepartments = () => {
+    if (isAllDepartments) {
+      // Deselect ALL
+      setIsAllDepartments(false);
+      setSelectedDepartmentIds([]);
+    } else {
+      // Select ALL
+      setIsAllDepartments(true);
+      setSelectedDepartmentIds([]);
+    }
+  };
+
   const handleCreate = async () => {
     if (!title.trim()) {
       toast.error('Card title is required');
       return;
     }
     
-    // For HEAD users, departmentId must be their department
-    let finalDepartmentId: number | 'ALL' | null = departmentId;
+    // Determine final department selection
+    let finalDepartmentSelection: number[] | 'ALL';
+    
     if (user_type === 'HEAD') {
-      finalDepartmentId = user_department || null;
+      // HEAD users can only assign to their own department
+      finalDepartmentSelection = user_department ? [user_department] : [];
+    } else {
+      // ADMIN users can select multiple departments or ALL
+      if (isAllDepartments) {
+        finalDepartmentSelection = 'ALL';
+      } else {
+        finalDepartmentSelection = selectedDepartmentIds;
+      }
     }
     
-    if (!finalDepartmentId) {
-      toast.error('Department is required');
+    if (finalDepartmentSelection === 'ALL' && finalDepartmentSelection.length === 0) {
+      toast.error('At least one department is required');
+      return;
+    }
+    
+    if (Array.isArray(finalDepartmentSelection) && finalDepartmentSelection.length === 0) {
+      toast.error('At least one department is required');
       return;
     }
     
@@ -204,7 +243,6 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     let expirationDate: Date | null = null;
     if (includeExpiration && expiresAt) {
       expirationDate = new Date(expiresAt);
-      // Validate the date
       if (isNaN(expirationDate.getTime())) {
         toast.error('Please enter a valid expiration date');
         return;
@@ -214,7 +252,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     const success = await onCreate(
       title, 
       description, 
-      finalDepartmentId, 
+      finalDepartmentSelection, // Now passing array or 'ALL'
       finalHeadId, 
       expirationDate,
       allowedFileTypes
@@ -224,7 +262,8 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       toast.success('Card created successfully!');
       setTitle('');
       setDescription('');
-      setDepartmentId(null);
+      setSelectedDepartmentIds([]);
+      setIsAllDepartments(false);
       setSelectedHeadId(null);
       setExpiresAt('');
       setIncludeExpiration(false);
@@ -235,21 +274,16 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
 
   const handleFileTypeToggle = (value: string) => {
     if (value === '*') {
-      // If "All File Types" is selected, clear other selections
       setAllowedFileTypes(['*']);
     } else {
-      // Remove "All File Types" if present
       let newTypes = allowedFileTypes.filter(t => t !== '*');
       
       if (newTypes.includes(value)) {
-        // Remove if already selected
         newTypes = newTypes.filter(t => t !== value);
-        // If nothing left, default to all
         if (newTypes.length === 0) {
           newTypes = ['*'];
         }
       } else {
-        // Add new type
         newTypes.push(value);
       }
       
@@ -281,7 +315,9 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center min-w-[90px] disabled:opacity-50"
             onClick={handleCreate}
             type="button"
-            disabled={!title.trim() || loading || !departmentId}
+            disabled={!title.trim() || loading || 
+              (user_type === 'ADMIN' && !isAllDepartments && selectedDepartmentIds.length === 0) ||
+              (user_type === 'HEAD' && !user_department)}
           >
             {loading ? 'Creating...' : 'Create'}
           </button>
@@ -315,11 +351,13 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
         />
         
         {/* Department field - different for HEAD vs ADMIN */}
-        <label className="block mb-1 text-sm font-medium text-gray-700">Department</label>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Department{user_type === 'ADMIN' && 's'}
+        </label>
         <p className="text-xs text-gray-500 mb-2">
           {user_type === 'HEAD' 
             ? 'This card will be created for your department.' 
-            : 'Assign this card to a department or select ALL to make it visible to all departments.'}
+            : 'Select one or more departments for this card, or choose ALL departments.'}
         </p>
         
         {user_type === 'HEAD' ? (
@@ -335,27 +373,60 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             </p>
           </div>
         ) : (
-          // For ADMIN users - show department dropdown with ALL option
-          <select
-            className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-            value={departmentId ?? ''}
-            onChange={e => setDepartmentId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-            disabled={loading || departments.length === 0}
-          >
-            <option value="">Select Department</option>
-            <option value="ALL" className="font-semibold">📢 ALL DEPARTMENTS</option>
-            {departments.length === 0 ? (
-              <option>No departments found</option>
-            ) : (
-              departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))
+          // For ADMIN users - show multi-select department options
+          <div className="mb-4">
+            {/* ALL Departments option */}
+            <label className="flex items-center space-x-2 mb-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAllDepartments}
+                onChange={handleSelectAllDepartments}
+                disabled={loading}
+                className="rounded text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm font-semibold text-gray-700">📢 ALL DEPARTMENTS</span>
+            </label>
+
+            {/* Individual department selection */}
+            {!isAllDepartments && (
+              <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-3 bg-gray-50">
+                <p className="text-xs text-gray-500 mb-2">Select specific departments:</p>
+                {departments.length === 0 ? (
+                  <p className="text-sm text-gray-500">No departments found</p>
+                ) : (
+                  departments.map((dept) => (
+                    <label key={dept.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={selectedDepartmentIds.includes(dept.id)}
+                        onChange={() => handleDepartmentToggle(dept.id)}
+                        disabled={loading}
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{dept.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
             )}
-          </select>
+
+            {/* Selection summary */}
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-xs text-blue-700">
+                <strong>Selected:</strong> {
+                  isAllDepartments 
+                    ? 'All departments' 
+                    : selectedDepartmentIds.length === 0 
+                    ? 'No departments selected' 
+                    : `${selectedDepartmentIds.length} department(s) selected`
+                }
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Show info when ALL is selected */}
-        {departmentId === 'ALL' && (
+        {isAllDepartments && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
             <p className="text-sm text-blue-800">
               <strong>ℹ️ Note:</strong> This card will be visible to all departments. All staff members across all departments will be able to see and submit to this card.

@@ -4,12 +4,21 @@ import { useAuth } from '../context/AuthContext';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import CreateCardModal from '../modals/CreateCardModal';
 
+type Department = {
+  id: number;
+  name: string;
+};
+
 type CardItem = {
   id: number;
   title: string;
   description?: string | null;
-  department?: { id: number; name: string } | null;
+  departments?: Array<{
+    department: Department;
+  }>;
   files?: Array<any>;
+  // For backward compatibility
+  department?: Department | null;
 };
 
 const CardsPage: React.FC = () => {
@@ -31,7 +40,7 @@ const CardsPage: React.FC = () => {
     try {
       let url = 'http://localhost:3000/cards';
       const params = new URLSearchParams();
-  
+
       if (user?.user_type === 'HEAD' || user?.user_type === 'STAFF') {
         const departmentId = (user as any).department?.id ?? (user as any).departmentId;
         if (departmentId) {
@@ -41,13 +50,13 @@ const CardsPage: React.FC = () => {
       } else if (user?.user_type === 'ADMIN') {
         console.log('Using main endpoint for ADMIN (all cards)');
       }
-  
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
-  
+
       console.log('Fetching cards from URL:', url);
-  
+
       const token = localStorage.getItem('token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -56,7 +65,7 @@ const CardsPage: React.FC = () => {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-  
+
       const res = await fetch(url, { headers });
       
       if (!res.ok) {
@@ -75,8 +84,34 @@ const CardsPage: React.FC = () => {
       }
       
       const data = await res.json();
-      console.log(`Received ${data.length} cards from ${url}`);
-      setCards(data);
+      console.log(`Received ${data.length} cards from ${url}`, data);
+      
+      // Process the cards to handle the new structure
+      const processedCards = data.map((card: any) => {
+        // If card has departments array, use the first one for display
+        // or handle multiple departments
+        let displayDepartment = null;
+        if (card.departments && card.departments.length > 0) {
+          if (card.departments.length === 1) {
+            displayDepartment = card.departments[0].department;
+          } else {
+            // For multiple departments, you might want to show something else
+            displayDepartment = { 
+              id: 0, 
+              name: `${card.departments.length} Departments` 
+            };
+          }
+        }
+        
+        return {
+          ...card,
+          department: displayDepartment,
+          // Keep the original departments array for filtering
+          departments: card.departments || []
+        };
+      });
+      
+      setCards(processedCards);
     } catch (err: any) {
       console.error('Error in fetchCards:', err);
       setError(err.message || 'Error loading cards');
@@ -92,12 +127,24 @@ const CardsPage: React.FC = () => {
 const handleCreateCard = async (
   title: string, 
   description: string, 
-  departmentId: number | 'ALL', 
+  departmentIds: number[] | 'ALL', // Updated parameter name
   headId: number | null, 
   expiresAt: Date | null,
   allowedFileTypes: string[]
 ) => {
   try {
+    setCreateLoading(true);
+    setCreateError('');
+
+    console.log('Creating card with:', {
+      title,
+      description,
+      departmentIds, // Now departmentIds
+      headId,
+      expiresAt,
+      allowedFileTypes
+    });
+
     const response = await fetch('http://localhost:3000/cards', {
       method: 'POST',
       headers: {
@@ -107,35 +154,64 @@ const handleCreateCard = async (
       body: JSON.stringify({
         title,
         description,
-        departmentId: departmentId === 'ALL' ? null : departmentId, // Adjust based on your backend logic
+        departmentIds, // Send as departmentIds
         headId,
         expiresAt,
-        allowedFileTypes // Make sure this is included
+        allowedFileTypes
       })
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create card');
+      const errorText = await response.text();
+      console.error('Create card error response:', errorText);
+      let errorMessage = 'Failed to create card';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || errorData.details || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
+    const newCard = await response.json();
+    console.log('Card created successfully:', newCard);
+
+    // Refresh the cards list
+    await fetchCards();
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating card:', error);
+    setCreateError(error.message);
     return false;
+  } finally {
+    setCreateLoading(false);
   }
 };
 
   const departmentOptions = useMemo(() => {
-    const set = new Set<string>();
-    const options = cards
-      .map((c) => c.department?.name)
-      .filter(Boolean) as string[];
-    options.forEach((n) => set.add(n));
-    return Array.from(set).sort();
+    const departments = new Set<string>();
+    
+    cards.forEach(card => {
+      if (card.departments && card.departments.length > 0) {
+        card.departments.forEach(deptRelation => {
+          if (deptRelation.department?.name) {
+            departments.add(deptRelation.department.name);
+          }
+        });
+      }
+      // Also check the legacy department field for backward compatibility
+      if (card.department?.name) {
+        departments.add(card.department.name);
+      }
+    });
+    
+    return Array.from(departments).sort();
   }, [cards]);
 
   const filtered = useMemo(() => {
     let list = cards.slice();
+    
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter((c) =>
@@ -144,14 +220,25 @@ const handleCreateCard = async (
         (c.department?.name || '').toLowerCase().includes(q)
       );
     }
+    
     if (deptFilter !== 'all') {
-      list = list.filter((c) => (c.department?.name || '') === deptFilter);
+      list = list.filter((c) => {
+        // Check both the display department and the departments array
+        const displayDeptName = c.department?.name || '';
+        const hasDeptInArray = c.departments?.some(
+          deptRel => deptRel.department?.name === deptFilter
+        );
+        
+        return displayDeptName === deptFilter || hasDeptInArray;
+      });
     }
+    
     if (sortBy === 'title') {
       list.sort((a, b) => a.title.localeCompare(b.title));
     } else {
       list.sort((a, b) => b.id - a.id);
     }
+    
     return list;
   }, [cards, query, deptFilter, sortBy]);
 

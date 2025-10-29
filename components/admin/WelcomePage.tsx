@@ -22,54 +22,85 @@ const CardSubmissionAnalytics = () => {
   const [error, setError] = useState(null);
 
   // Fetch all data
-  const fetchData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
-
-      const [statsRes, realtimeRes, cardsRes, deptRes, activityRes, storageRes] = await Promise.all([
-        fetch('http://localhost:3000/activities/stats/overview', { headers }),
-        fetch('http://localhost:3000/activities/stats/realtime', { headers }),
-        fetch('http://localhost:3000/cards/analytics/cards', { headers }),
-        fetch('http://localhost:3000/activities/stats/departments', { headers }),
-        fetch('http://localhost:3000/activities/recent?limit=8', { headers }),
-        fetch('http://localhost:3000/departments/storage', { headers })
-      ]);
-
-      if (!statsRes.ok || !realtimeRes.ok || !cardsRes.ok || !deptRes.ok || !activityRes.ok || !storageRes.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const [stats, realtime, cards, dept, activity, storage] = await Promise.all([
-        statsRes.json(),
-        realtimeRes.json(),
-        cardsRes.json(),
-        deptRes.json(),
-        activityRes.json(),
-        storageRes.json()
-      ]);
-
-      setSubmissionStats(stats);
-      setRealtimeMetrics(realtime);
-      setMyCards(cards);
-      setDepartmentStats(dept);
-      setRecentActivity(activity);
-      setDepartmentStorage(storage);
-      setLoading(false);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err.message);
-      setLoading(false);
+const fetchData = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
     }
-  };
+
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+
+    console.log('🔐 Starting API calls with token');
+
+    // Create individual fetch functions with error handling
+    const fetchWithErrorHandling = async (url, endpointName) => {
+      try {
+        console.log(`🌐 Fetching ${endpointName}:`, url);
+        const response = await fetch(url, { headers });
+        
+        if (!response.ok) {
+          console.error(`❌ ${endpointName} failed:`, response.status, response.statusText);
+          throw new Error(`${endpointName}: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log(`✅ ${endpointName} success:`, data);
+        return data;
+      } catch (error) {
+        console.error(`💥 ${endpointName} error:`, error);
+        // Return null or empty data instead of throwing to prevent Promise.all from failing completely
+        return null;
+      }
+    };
+
+    // Make all API calls individually to isolate errors
+    const [
+      stats,
+      realtime, 
+      cards,
+      dept,
+      activity,
+      storage
+    ] = await Promise.all([
+      fetchWithErrorHandling('http://localhost:3000/activities/stats/overview', 'Overview Stats'),
+      fetchWithErrorHandling('http://localhost:3000/activities/stats/realtime', 'Realtime Stats'),
+      fetchWithErrorHandling('http://localhost:3000/cards/analytics/cards', 'Card Analytics'),
+      fetchWithErrorHandling('http://localhost:3000/activities/stats/departments', 'Department Stats'),
+      fetchWithErrorHandling('http://localhost:3000/activities/recent?limit=8', 'Recent Activity'),
+      fetchWithErrorHandling('http://localhost:3000/departments/storage', 'Department Storage')
+    ]);
+
+    // Set state only for successful responses
+    if (stats) setSubmissionStats(stats);
+    if (realtime) setRealtimeMetrics(realtime);
+    if (cards) setMyCards(cards);
+    if (dept) setDepartmentStats(dept);
+    if (activity) setRecentActivity(activity);
+    if (storage) setDepartmentStorage(storage);
+
+    // Check if all requests failed
+    const successfulRequests = [stats, realtime, cards, dept, activity, storage].filter(Boolean).length;
+    if (successfulRequests === 0) {
+      throw new Error('All API requests failed. Please check your backend server.');
+    }
+
+    console.log(`✅ ${successfulRequests}/6 API calls successful`);
+    setLoading(false);
+
+  } catch (err) {
+    console.error('💥 Main fetch error:', err);
+    setError(err.message);
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchData();
