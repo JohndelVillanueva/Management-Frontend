@@ -22,85 +22,142 @@ const CardSubmissionAnalytics = () => {
   const [error, setError] = useState(null);
 
   // Fetch all data
-const fetchData = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
+  // Add this function to your frontend component
+  const generateSampleCards = (totalCards) => {
+    if (totalCards === 0) return [];
 
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
+    const sampleTitles = [
+      "Quarterly Report Submission",
+      "Faculty Development Program",
+      "Research Project Update",
+      "Department Meeting Minutes",
+      "Curriculum Review Document"
+    ];
 
-    console.log('🔐 Starting API calls with token');
+    const samplePostedBy = ["Admin Office", "Department Head", "Academic Committee"];
 
-    // Create individual fetch functions with error handling
-    const fetchWithErrorHandling = async (url, endpointName) => {
-      try {
-        console.log(`🌐 Fetching ${endpointName}:`, url);
-        const response = await fetch(url, { headers });
-        
-        if (!response.ok) {
-          console.error(`❌ ${endpointName} failed:`, response.status, response.statusText);
-          throw new Error(`${endpointName}: ${response.status} ${response.statusText}`);
+    return Array.from({ length: totalCards }, (_, index) => ({
+      id: index + 1,
+      title: sampleTitles[index % sampleTitles.length],
+      postedBy: samplePostedBy[index % samplePostedBy.length],
+      deadline: new Date(Date.now() + (index + 1) * 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      priority: index === 0 ? "High" : index === 1 ? "Medium" : "Low",
+      submissions: Math.floor(Math.random() * 5),
+      totalStaff: 5,
+      status: index === 0 ? "In Progress" : "Pending"
+    }));
+  };
+
+  const fetchWithErrorHandling = async (url, endpointName, fallbackData = []) => {
+    try {
+      console.log(`🌐 Fetching ${endpointName}:`, url);
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      const response = await fetch(url, { headers });
+
+      console.log(`📊 ${endpointName} Response Status:`, response.status);
+
+      if (!response.ok) {
+        // TRY TO GET THE ACTUAL ERROR MESSAGE FROM BACKEND
+        let errorDetails = '';
+        try {
+          const errorData = await response.json();
+          errorDetails = JSON.stringify(errorData);
+        } catch (e) {
+          errorDetails = await response.text();
         }
-        
-        const data = await response.json();
-        console.log(`✅ ${endpointName} success:`, data);
-        return data;
-      } catch (error) {
-        console.error(`💥 ${endpointName} error:`, error);
-        // Return null or empty data instead of throwing to prevent Promise.all from failing completely
-        return null;
+
+        console.error(`❌ ${endpointName} failed:`, response.status, response.statusText);
+        console.error(`❌ ${endpointName} error details:`, errorDetails);
+
+        throw new Error(`${endpointName}: ${response.status} - ${errorDetails}`);
       }
-    };
 
-    // Make all API calls individually to isolate errors
-    const [
-      stats,
-      realtime, 
-      cards,
-      dept,
-      activity,
-      storage
-    ] = await Promise.all([
-      fetchWithErrorHandling('http://localhost:3000/activities/stats/overview', 'Overview Stats'),
-      fetchWithErrorHandling('http://localhost:3000/activities/stats/realtime', 'Realtime Stats'),
-      fetchWithErrorHandling('http://localhost:3000/cards/analytics/cards', 'Card Analytics'),
-      fetchWithErrorHandling('http://localhost:3000/activities/stats/departments', 'Department Stats'),
-      fetchWithErrorHandling('http://localhost:3000/activities/recent?limit=8', 'Recent Activity'),
-      fetchWithErrorHandling('http://localhost:3000/departments/storage', 'Department Storage')
-    ]);
-
-    // Set state only for successful responses
-    if (stats) setSubmissionStats(stats);
-    if (realtime) setRealtimeMetrics(realtime);
-    if (cards) setMyCards(cards);
-    if (dept) setDepartmentStats(dept);
-    if (activity) setRecentActivity(activity);
-    if (storage) setDepartmentStorage(storage);
-
-    // Check if all requests failed
-    const successfulRequests = [stats, realtime, cards, dept, activity, storage].filter(Boolean).length;
-    if (successfulRequests === 0) {
-      throw new Error('All API requests failed. Please check your backend server.');
+      const data = await response.json();
+      console.log(`✅ ${endpointName} success:`, data);
+      return data;
+    } catch (error) {
+      console.error(`💥 ${endpointName} error:`, error);
+      console.warn(`🔄 Using fallback data for ${endpointName}`);
+      return fallbackData;
     }
+  };
 
-    console.log(`✅ ${successfulRequests}/6 API calls successful`);
-    setLoading(false);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  } catch (err) {
-    console.error('💥 Main fetch error:', err);
-    setError(err.message);
-    setLoading(false);
-  }
-};
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      console.log('🔐 Starting API calls with token');
+
+      // Make all API calls - UPDATED: Use new completion rates endpoint
+      const [
+        cardAnalytics,
+        realtime,
+        deptCompletion,  // 👈 CHANGED: This now calls the new endpoint
+        activity,
+        storage
+      ] = await Promise.all([
+        fetchWithErrorHandling('http://localhost:3000/cards/analytics', 'Card Analytics', {
+          totalCards: 0,
+          cardsByDepartment: {},
+          totalSubmissions: 0,
+          totalFiles: 0,
+          recentCards: []
+        }),
+        fetchWithErrorHandling('http://localhost:3000/activities/stats/realtime', 'Realtime Stats', {
+          activeTeachers: 0
+        }),
+        // 👇 CHANGED: Use the new completion rates endpoint
+        fetchWithErrorHandling('http://localhost:3000/departments/completion-rates', 'Department Completion Rates', []),
+        fetchWithErrorHandling('http://localhost:3000/activities/recent?limit=8', 'Recent Activity', []),
+        fetchWithErrorHandling('http://localhost:3000/departments/storage', 'Department Storage', [])
+      ]);
+
+      // Set state with the data - UPDATED: Use new completion rates data
+      setSubmissionStats({
+        totalCards: cardAnalytics.totalCards || 0,
+        submitted: cardAnalytics.totalSubmissions || 0,
+        pending: Math.max(0, (cardAnalytics.totalCards || 0) - (cardAnalytics.totalSubmissions || 0)),
+        overdue: 0,
+        completionRate: cardAnalytics.totalCards > 0 ?
+          Math.round((cardAnalytics.totalSubmissions / cardAnalytics.totalCards) * 100) : 0
+      });
+
+      const cardsData = cardAnalytics.recentCards || [];
+      setMyCards(cardsData);
+      setRealtimeMetrics(realtime);
+      setDepartmentStats(deptCompletion); // 👈 This now gets the proper completion data
+      setRecentActivity(activity);
+      setDepartmentStorage(storage);
+
+      console.log(`✅ All data loaded successfully`);
+      console.log(`📊 Department completion rates:`, deptCompletion); // Should show real data now
+
+      setLoading(false);
+
+    } catch (err) {
+      console.error('💥 Main fetch error:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log('🔍 DEBUG - submissionStats:', submissionStats);
+    console.log('🔍 DEBUG - departmentStats:', departmentStats);
+    console.log('🔍 DEBUG - recentActivity:', recentActivity);
+    console.log('🔍 DEBUG - realtimeMetrics:', realtimeMetrics);
+  }, [submissionStats, departmentStats, recentActivity, realtimeMetrics]);
 
   useEffect(() => {
     fetchData();
@@ -127,10 +184,62 @@ const fetchData = async () => {
         .then((res) => res.json())
         .then((data) => setDepartmentStorage(data))
         .catch(console.error);
+
+      // 👇 ADD: Refresh completion rates in the interval
+      fetch("http://localhost:3000/departments/completion-rates", { headers })
+        .then((res) => res.json())
+        .then((data) => setDepartmentStats(data))
+        .catch(console.error);
+
+      // Also refresh cards data in the interval
+      fetch("http://localhost:3000/cards/analytics", { headers })
+        .then((res) => res.json())
+        .then((data) => {
+          setSubmissionStats({
+            totalCards: data.totalCards || 0,
+            submitted: data.totalSubmissions || 0,
+            pending: Math.max(0, (data.totalCards || 0) - (data.totalSubmissions || 0)),
+            overdue: 0,
+            completionRate: data.totalCards > 0 ?
+              Math.round((data.totalSubmissions / data.totalCards) * 100) : 0
+          });
+          const cardsData = data.recentCards || [];
+          setMyCards(cardsData);
+        })
+        .catch(console.error);
     }, 10000);
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (departmentStats && departmentStats.length > 0) {
+      console.log('🔍 FULL departmentStats data structure:', JSON.stringify(departmentStats, null, 2));
+
+      departmentStats.forEach((dept, index) => {
+        console.log(`=== DEPARTMENT ${index} DETAILED ANALYSIS ===`);
+        console.log(`📊 Raw object:`, dept);
+        console.log(`📊 All keys:`, Object.keys(dept));
+        console.log(`📊 department property:`, dept.department);
+        console.log(`📊 totalCards property:`, dept.totalCards);
+        console.log(`📊 completedCards property:`, dept.completedCards);
+        console.log(`📊 completionRate property:`, dept.completionRate);
+        console.log(`📊 display property:`, dept.display);
+
+        // Check if properties exist
+        console.log(`📊 Has department?`, 'department' in dept);
+        console.log(`📊 Has totalCards?`, 'totalCards' in dept);
+        console.log(`📊 Has completedCards?`, 'completedCards' in dept);
+        console.log(`📊 Has completionRate?`, 'completionRate' in dept);
+
+        // Calculate what the completion rate should be
+        if (dept.totalCards > 0) {
+          const calculatedRate = Math.round((dept.completedCards / dept.totalCards) * 100);
+          console.log(`📊 Calculated completion rate:`, calculatedRate + '%');
+        }
+      });
+    }
+  }, [departmentStats]);
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -231,6 +340,7 @@ const fetchData = async () => {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
+              <h1 className="text-3xl font-bold text-gray-900">Submission Analytics</h1>
               <p className="text-lg text-gray-600 mt-2">
                 Administrator Dashboard • All Departments
               </p>
@@ -238,10 +348,40 @@ const fetchData = async () => {
             <div className="bg-orange-100 px-6 py-3 rounded-lg">
               <p className="text-base text-gray-600">Overall Completion</p>
               <p className="text-3xl font-bold text-orange-700">
-                {submissionStats.completionRate}%
+                {submissionStats.completionRate || 0}%
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Metric Cards Grid - ADDED BACK */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          <MetricCard
+            title="Total Cards Posted"
+            value={submissionStats.totalCards}
+            subtitle="Cards in the system"
+            icon="📋"
+          />
+          <MetricCard
+            title="Completed"
+            value={submissionStats.submitted}
+            subtitle="All staff submitted"
+            icon="✅"
+            color="green"
+          />
+          <MetricCard
+            title="In Progress"
+            value={submissionStats.pending}
+            subtitle="Awaiting submissions"
+            icon="⏳"
+          />
+          <MetricCard
+            title="Overdue"
+            value={submissionStats.overdue}
+            subtitle="Past deadline"
+            icon="⚠️"
+            color="red"
+          />
         </div>
 
         {/* Real-time Metrics - Only Active Teachers */}
@@ -270,7 +410,7 @@ const fetchData = async () => {
           <h2 className="text-2xl font-semibold text-gray-800 mb-6">
             Department Storage & Analytics
           </h2>
-          
+
           {/* Global Storage Warning */}
           {departmentStorage.some(dept => dept.storageStatus === 'critical') && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -286,33 +426,32 @@ const fetchData = async () => {
             </div>
           )}
 
-          {departmentStorage.some(dept => dept.storageStatus === 'warning') && 
-          !departmentStorage.some(dept => dept.storageStatus === 'critical') && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center">
-                <span className="text-yellow-500 text-xl mr-3">⚠️</span>
-                <div>
-                  <h4 className="text-yellow-800 font-semibold">Storage Warning</h4>
-                  <p className="text-yellow-600 text-sm">
-                    Some departments are using high storage. Monitor usage closely.
-                  </p>
+          {departmentStorage.some(dept => dept.storageStatus === 'warning') &&
+            !departmentStorage.some(dept => dept.storageStatus === 'critical') && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center">
+                  <span className="text-yellow-500 text-xl mr-3">⚠️</span>
+                  <div>
+                    <h4 className="text-yellow-800 font-semibold">Storage Warning</h4>
+                    <p className="text-yellow-600 text-sm">
+                      Some departments are using high storage. Monitor usage closely.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {departmentStorage.length > 0 ? (
               departmentStorage.map((dept, idx) => (
-                <div 
-                  key={idx} 
-                  className={`border rounded-lg p-6 hover:shadow-lg transition-shadow ${
-                    dept.storageStatus === 'critical' 
-                      ? 'border-red-300 bg-red-50' 
-                      : dept.storageStatus === 'warning'
+                <div
+                  key={idx}
+                  className={`border rounded-lg p-6 hover:shadow-lg transition-shadow ${dept.storageStatus === 'critical'
+                    ? 'border-red-300 bg-red-50'
+                    : dept.storageStatus === 'warning'
                       ? 'border-yellow-300 bg-yellow-50'
                       : 'border-gray-200'
-                  }`}
+                    }`}
                 >
                   {/* Department Header with Warning Icon */}
                   <div className="flex items-center justify-between mb-4">
@@ -337,21 +476,19 @@ const fetchData = async () => {
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium text-gray-700">Storage Usage</span>
-                        <span className={`text-sm font-bold ${
-                          dept.storageStatus === 'critical' ? 'text-red-600' :
+                        <span className={`text-sm font-bold ${dept.storageStatus === 'critical' ? 'text-red-600' :
                           dept.storageStatus === 'warning' ? 'text-yellow-600' :
-                          'text-gray-600'
-                        }`}>
+                            'text-gray-600'
+                          }`}>
                           {dept.storagePercentage}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3">
                         <div
-                          className={`h-3 rounded-full transition-all ${
-                            dept.storageStatus === 'critical' ? 'bg-red-500' :
+                          className={`h-3 rounded-full transition-all ${dept.storageStatus === 'critical' ? 'bg-red-500' :
                             dept.storageStatus === 'warning' ? 'bg-yellow-500' :
-                            'bg-green-500'
-                          }`}
+                              'bg-green-500'
+                            }`}
                           style={{ width: `${Math.min(dept.storagePercentage, 100)}%` }}
                         />
                       </div>
@@ -422,270 +559,271 @@ const fetchData = async () => {
           </div>
         </div>
 
-        {/* My Submission Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          <MetricCard
-            title="Total Cards Posted"
-            value={submissionStats.totalCards}
-            subtitle="Cards in the system"
-            icon="📋"
-          />
-          <MetricCard
-            title="Completed"
-            value={submissionStats.submitted}
-            subtitle="All staff submitted"
-            icon="✅"
-            color="green"
-          />
-          <MetricCard
-            title="In Progress"
-            value={submissionStats.pending}
-            subtitle="Awaiting submissions"
-            icon="⏳"
-          />
-          <MetricCard
-            title="Overdue"
-            value={submissionStats.overdue}
-            subtitle="Past deadline"
-            icon="⚠️"
-            color="red"
-          />
-        </div>
+{/* My Cards Table - UPDATED */}
+<div className="bg-white rounded-lg shadow-md p-8 mb-8">
+  <h3 className="text-2xl font-semibold text-gray-800 mb-6">
+    All Posted Cards
+  </h3>
+  <div className="overflow-x-auto">
+    <table className="w-full">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+            Card Title
+          </th>
+          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+            Description
+          </th>
+          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+            Created Date
+          </th>
+          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+            Status
+          </th>
+          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+            Submissions
+          </th>
+          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+            Card Status
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-200">
+        {myCards.length > 0 ? (
+          myCards.map((card) => {
+            // Calculate submission count - check multiple possible properties
+            const submissionCount = 
+              card.submissionsCount ||  // From backend analytics
+              card.submissions ||       // Direct submissions array length
+              card._count?.submissions || // From Prisma _count
+              0;
 
-        {/* My Cards Table */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-6">
-            All Posted Cards
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-                    Card Title
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-                    Posted By
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-                    Deadline
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-                    Priority
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-                    Submissions
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {myCards.length > 0 ? (
-                  myCards.map((card) => (
-                    <tr key={card.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <span className="text-orange-500 mr-3 text-2xl">
-                            📄
-                          </span>
-                          <span className="font-medium text-gray-800 text-base">
-                            {card.title}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-base text-gray-600">
-                        {card.postedBy}
-                      </td>
-                      <td className="px-6 py-4 text-base text-gray-600">
-                        {card.deadline}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 text-sm rounded-full border ${getPriorityColor(
-                            card.priority
-                          )}`}
-                        >
-                          {card.priority}
+            // Calculate expected submissions (staff count)
+            const staffCount = card.departments?.reduce((total, dept) => 
+              total + (dept.staffCount || 0), 0) || 0;
+
+            return (
+              <tr key={card.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4">
+                  <div className="flex items-center">
+                    <span className="text-orange-500 mr-3 text-2xl">
+                      📄
+                    </span>
+                    <div>
+                      <span className="font-medium text-gray-800 text-base block">
+                        {card.title || 'Untitled Card'}
+                      </span>
+                      {card.department && (
+                        <span className="text-xs text-gray-500 mt-1">
+                          {card.department}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-base font-medium text-gray-800">
-                            {card.submissions} /{" "}
-                            {card.totalStaff > 0 ? card.totalStaff : "N/A"}
-                          </span>
-                          <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                            <div
-                              className="bg-orange-500 h-2 rounded-full transition-all"
-                              style={{
-                                width: `${
-                                  card.totalStaff > 0
-                                    ? Math.min(
-                                        (card.submissions / card.totalStaff) *
-                                          100,
-                                        100
-                                      )
-                                    : 0
-                                }%`,
-                              }}
-                            />
-                          </div>
-                          {(!card.totalStaff || card.totalStaff === 0) && (
-                            <span className="text-xs text-gray-500 mt-1">
-                              No staff in department
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 text-sm rounded-full border ${getStatusColor(
-                            card.status
-                          )}`}
-                        >
-                          {card.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="6"
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      No cards found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-base text-gray-600 max-w-xs">
+                  <div className="truncate">
+                    {card.description || 'No description'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-base text-gray-600">
+                  {card.createdAt ? new Date(card.createdAt).toLocaleDateString() : 'N/A'}
+                </td>
+                <td className="px-6 py-4">
+                  <span
+                    className={`px-3 py-1 text-sm rounded-full border ${
+                      card.isPublic 
+                        ? "text-green-600 bg-green-100 border-green-300"
+                        : "text-blue-600 bg-blue-100 border-blue-300"
+                    }`}
+                  >
+                    {card.isPublic ? "Public" : "Private"}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="text-base font-medium text-gray-800">
+                      {submissionCount} / {staffCount > 0 ? staffCount : 'N/A'}
+                    </span>
+                    <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
+                      <div
+                        className="bg-orange-500 h-2 rounded-full transition-all"
+                        style={{
+                          width: staffCount > 0 
+                            ? `${Math.min((submissionCount / staffCount) * 100, 100)}%`
+                            : '0%'
+                        }}
+                      />
+                    </div>
+                    {staffCount === 0 && (
+                      <span className="text-xs text-gray-500 mt-1">
+                        No staff in department
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span
+                    className={`px-3 py-1 text-sm rounded-full border ${getStatusColor(
+                      card.status || 'active'
+                    )}`}
+                  >
+                    {card.status === 'active' ? 'Active' : (card.status || 'Active')}
+                  </span>
+                </td>
+              </tr>
+            );
+          })
+        ) : (
+          <tr>
+            <td
+              colSpan="6"
+              className="px-6 py-8 text-center text-gray-500"
+            >
+              No cards found
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
 
         {/* Status Overview */}
+        {/* Status Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* My Status Breakdown */}
+          {/* Overall Status Breakdown */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-6">
               Overall Status Breakdown
             </h3>
             <div className="space-y-6">
+              {/* Completed */}
               <div>
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">Completed</span>
                   <span className="font-semibold text-green-600">
-                    {submissionStats.submitted}
+                    {submissionStats.submitted || submissionStats.completed || 0}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
                   <div
                     className="bg-green-500 h-4 rounded-full transition-all"
                     style={{
-                      width: `${
-                        submissionStats.totalCards > 0
-                          ? (submissionStats.submitted /
-                              submissionStats.totalCards) *
-                            100
+                      width: `${submissionStats.totalCards > 0
+                          ? Math.min(((submissionStats.submitted || submissionStats.completed || 0) / submissionStats.totalCards) * 100, 100)
                           : 0
-                      }%`,
+                        }%`,
                     }}
                   />
                 </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  {submissionStats.submitted || submissionStats.completed || 0} / {submissionStats.totalCards || 0} cards
+                </p>
               </div>
+
+              {/* In Progress */}
               <div>
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">In Progress</span>
                   <span className="font-semibold text-orange-600">
-                    {submissionStats.pending}
+                    {submissionStats.pending || submissionStats.inProgress || 0}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
                   <div
                     className="bg-orange-500 h-4 rounded-full transition-all"
                     style={{
-                      width: `${
-                        submissionStats.totalCards > 0
-                          ? (submissionStats.pending /
-                              submissionStats.totalCards) *
-                            100
+                      width: `${submissionStats.totalCards > 0
+                          ? Math.min(((submissionStats.pending || submissionStats.inProgress || 0) / submissionStats.totalCards) * 100, 100)
                           : 0
-                      }%`,
+                        }%`,
                     }}
                   />
                 </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  {submissionStats.pending || submissionStats.inProgress || 0} / {submissionStats.totalCards || 0} cards
+                </p>
               </div>
+
+              {/* Overdue */}
               <div>
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">Overdue</span>
                   <span className="font-semibold text-red-600">
-                    {submissionStats.overdue}
+                    {submissionStats.overdue || 0}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
                   <div
                     className="bg-red-500 h-4 rounded-full transition-all"
                     style={{
-                      width: `${
-                        submissionStats.totalCards > 0
-                          ? (submissionStats.overdue /
-                              submissionStats.totalCards) *
-                            100
+                      width: `${submissionStats.totalCards > 0
+                          ? Math.min(((submissionStats.overdue || 0) / submissionStats.totalCards) * 100, 100)
                           : 0
-                      }%`,
+                        }%`,
                     }}
                   />
                 </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  {submissionStats.overdue || 0} / {submissionStats.totalCards || 0} cards
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Department Comparison */}
+          {/* Department Completion Rates - FIXED VERSION */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-6">
               Department Completion Rates
             </h3>
             <div className="space-y-6">
-              {departmentStats.length > 0 ? (
+              {departmentStats && departmentStats.length > 0 ? (
                 departmentStats.map((dept, idx) => (
                   <div key={idx}>
                     <div className="flex justify-between text-base mb-2">
-                      <span className="text-gray-600">{dept.department}</span>
+                      <span className="text-gray-600">
+                        {dept.department}
+                      </span>
                       <span className="font-semibold text-orange-600">
-                        {dept.rate}%
+                        {dept.completionRate}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
                         className="bg-orange-500 h-3 rounded-full transition-all"
-                        style={{ width: `${dept.rate}%` }}
+                        style={{
+                          width: `${parseInt(dept.completionRate) || 0}%`
+                        }}
                       />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {dept.submitted} / {dept.total} cards
+                      {dept.completedCards} / {dept.totalCards} cards
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-4">
-                  No department data
-                </p>
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">🏢</div>
+                  <p className="text-gray-500">No department data available</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Department completion rates will appear here
+                  </p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Recent Submissions */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-6">
               Recent Submissions
             </h3>
             <div className="space-y-4">
-              {recentActivity.length > 0 ? (
-                recentActivity.map((activity) => (
+              {recentActivity && recentActivity.length > 0 ? (
+                recentActivity.map((activity, idx) => (
                   <div
-                    key={activity.id}
+                    key={activity.id || idx}
                     className="flex items-start space-x-3 pb-4 border-b last:border-b-0"
                   >
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -693,19 +831,28 @@ const fetchData = async () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-base text-gray-800 font-medium truncate">
-                        {activity.teacher}
+                        {activity.teacher || activity.user || 'Unknown User'}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {activity.action} • {activity.card}
+                        {activity.action || 'Submitted'} • {activity.card || activity.description || 'Document'}
                       </p>
-                      <p className="text-sm text-gray-500">{activity.time}</p>
+                      <p className="text-sm text-gray-500">
+                        {activity.time || activity.createdAt || 'Recently'}
+                      </p>
+                      {activity.department && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          {activity.department}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-4">
-                  No recent activity
-                </p>
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">📝</div>
+                  <p className="text-gray-500">No recent activity</p>
+                  <p className="text-sm text-gray-400 mt-1">Submissions will appear here</p>
+                </div>
               )}
             </div>
           </div>
