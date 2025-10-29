@@ -18,12 +18,31 @@ interface HeadUser {
 interface CreateCardModalProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (title: string, description: string, departmentId: number, headId: number | null, expiresAt: Date | null) => Promise<boolean>;
+  onCreate: (
+    title: string, 
+    description: string, 
+    departmentId: number | 'ALL', 
+    headId: number | null, 
+    expiresAt: Date | null,
+    allowedFileTypes: string[]
+  ) => Promise<boolean>;
   loading: boolean;
   error: string;
   user_type: 'ADMIN' | 'HEAD';
   user_department?: number;
 }
+
+const FILE_TYPE_OPTIONS = [
+  { value: '.pdf', label: 'PDF Documents (.pdf)' },
+  { value: '.doc,.docx', label: 'Word Documents (.doc, .docx)' },
+  { value: '.xls,.xlsx', label: 'Excel Spreadsheets (.xls, .xlsx)' },
+  { value: '.ppt,.pptx', label: 'PowerPoint Presentations (.ppt, .pptx)' },
+  { value: 'image/*', label: 'Images (all formats)' },
+  { value: '.jpg,.jpeg,.png', label: 'Images (.jpg, .png)' },
+  { value: '.zip,.rar', label: 'Compressed Files (.zip, .rar)' },
+  { value: '.txt', label: 'Text Files (.txt)' },
+  { value: '*', label: 'All File Types' }
+];
 
 const CreateCardModal: React.FC<CreateCardModalProps> = ({ 
   open, 
@@ -37,13 +56,14 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [departmentId, setDepartmentId] = useState<number | null>(null);
+  const [departmentId, setDepartmentId] = useState<number | 'ALL' | null>(null);
   const [deptError, setDeptError] = useState('');
   const [headUsers, setHeadUsers] = useState<HeadUser[]>([]);
   const [selectedHeadId, setSelectedHeadId] = useState<number | null>(null);
   const [expiresAt, setExpiresAt] = useState<string>('');
   const [includeExpiration, setIncludeExpiration] = useState(false);
   const [userDepartmentInfo, setUserDepartmentInfo] = useState<Department | null>(null);
+  const [allowedFileTypes, setAllowedFileTypes] = useState<string[]>(['*']);
 
   useEffect(() => {
     if (open) {
@@ -147,6 +167,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       setExpiresAt('');
       setIncludeExpiration(false);
       setUserDepartmentInfo(null);
+      setAllowedFileTypes(['*']);
     }
   }, [open, user_type, user_department]);
 
@@ -166,7 +187,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     }
     
     // For HEAD users, departmentId must be their department
-    let finalDepartmentId = departmentId;
+    let finalDepartmentId: number | 'ALL' | null = departmentId;
     if (user_type === 'HEAD') {
       finalDepartmentId = user_department || null;
     }
@@ -195,7 +216,8 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       description, 
       finalDepartmentId, 
       finalHeadId, 
-      expirationDate
+      expirationDate,
+      allowedFileTypes
     );
     
     if (success) {
@@ -206,7 +228,32 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       setSelectedHeadId(null);
       setExpiresAt('');
       setIncludeExpiration(false);
+      setAllowedFileTypes(['*']);
       onClose();
+    }
+  };
+
+  const handleFileTypeToggle = (value: string) => {
+    if (value === '*') {
+      // If "All File Types" is selected, clear other selections
+      setAllowedFileTypes(['*']);
+    } else {
+      // Remove "All File Types" if present
+      let newTypes = allowedFileTypes.filter(t => t !== '*');
+      
+      if (newTypes.includes(value)) {
+        // Remove if already selected
+        newTypes = newTypes.filter(t => t !== value);
+        // If nothing left, default to all
+        if (newTypes.length === 0) {
+          newTypes = ['*'];
+        }
+      } else {
+        // Add new type
+        newTypes.push(value);
+      }
+      
+      setAllowedFileTypes(newTypes);
     }
   };
 
@@ -218,8 +265,8 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       isOpen={open}
       onClose={onClose}
       title="Create New Card"
-      description="Define the card title, department, optional head, description, and expiration date."
-      widthClassName="max-w-xl"
+      description="Define the card title, department, optional head, description, expiration date, and allowed file types."
+      widthClassName="max-w-2xl"
       footer={(
         <>
           <button
@@ -241,7 +288,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
         </>
       )}
     >
-      <div>
+      <div className="max-h-[70vh] overflow-y-auto pr-2">
         {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
         {deptError && <div className="mb-4 text-red-600 text-sm">{deptError}</div>}
         
@@ -264,6 +311,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
           onChange={e => setDescription(e.target.value)}
           placeholder="Enter description"
           disabled={loading}
+          rows={3}
         />
         
         {/* Department field - different for HEAD vs ADMIN */}
@@ -271,7 +319,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
         <p className="text-xs text-gray-500 mb-2">
           {user_type === 'HEAD' 
             ? 'This card will be created for your department.' 
-            : 'Assign this card to a department.'}
+            : 'Assign this card to a department or select ALL to make it visible to all departments.'}
         </p>
         
         {user_type === 'HEAD' ? (
@@ -287,14 +335,15 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             </p>
           </div>
         ) : (
-          // For ADMIN users - show department dropdown
+          // For ADMIN users - show department dropdown with ALL option
           <select
             className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
             value={departmentId ?? ''}
-            onChange={e => setDepartmentId(Number(e.target.value))}
+            onChange={e => setDepartmentId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
             disabled={loading || departments.length === 0}
           >
             <option value="">Select Department</option>
+            <option value="ALL" className="font-semibold">📢 ALL DEPARTMENTS</option>
             {departments.length === 0 ? (
               <option>No departments found</option>
             ) : (
@@ -303,6 +352,15 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
               ))
             )}
           </select>
+        )}
+
+        {/* Show info when ALL is selected */}
+        {departmentId === 'ALL' && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-sm text-blue-800">
+              <strong>ℹ️ Note:</strong> This card will be visible to all departments. All staff members across all departments will be able to see and submit to this card.
+            </p>
+          </div>
         )}
 
         {/* Head user dropdown - only for ADMIN users */}
@@ -334,6 +392,37 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             </p>
           </div>
         )}
+
+        {/* Allowed File Types Section */}
+        <div className="mb-4">
+          <label className="block mb-1 text-sm font-medium text-gray-700">Allowed File Types for Submissions</label>
+          <p className="text-xs text-gray-500 mb-3">Select which file types staff can submit for this card.</p>
+          
+          <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-3 bg-gray-50">
+            {FILE_TYPE_OPTIONS.map((option) => (
+              <label key={option.value} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
+                <input
+                  type="checkbox"
+                  checked={allowedFileTypes.includes(option.value)}
+                  onChange={() => handleFileTypeToggle(option.value)}
+                  disabled={loading}
+                  className="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{option.label}</span>
+              </label>
+            ))}
+          </div>
+          
+          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-xs text-blue-700">
+              <strong>Selected:</strong> {
+                allowedFileTypes.includes('*') 
+                  ? 'All file types allowed' 
+                  : allowedFileTypes.join(', ')
+              }
+            </p>
+          </div>
+        </div>
 
         {/* Expiration Date Section */}
         <div className="mb-4">
