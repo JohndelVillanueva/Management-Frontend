@@ -237,42 +237,149 @@ const CardSubmissionAnalytics = () => {
         {/* Department Storage Data */}
         <div className="mb-8 bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-            Department Stored Data
+            Department Storage & Analytics
           </h2>
+          
+          {/* Global Storage Warning */}
+          {departmentStorage.some(dept => dept.storageStatus === 'critical') && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center">
+                <span className="text-red-500 text-xl mr-3">⚠️</span>
+                <div>
+                  <h4 className="text-red-800 font-semibold">Storage Critical</h4>
+                  <p className="text-red-600 text-sm">
+                    Some departments are approaching storage limits. Consider archiving old files.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {departmentStorage.some(dept => dept.storageStatus === 'warning') && 
+          !departmentStorage.some(dept => dept.storageStatus === 'critical') && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center">
+                <span className="text-yellow-500 text-xl mr-3">⚠️</span>
+                <div>
+                  <h4 className="text-yellow-800 font-semibold">Storage Warning</h4>
+                  <p className="text-yellow-600 text-sm">
+                    Some departments are using high storage. Monitor usage closely.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {departmentStorage.length > 0 ? (
               departmentStorage.map((dept, idx) => (
-                <div key={idx} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                <div 
+                  key={idx} 
+                  className={`border rounded-lg p-6 hover:shadow-lg transition-shadow ${
+                    dept.storageStatus === 'critical' 
+                      ? 'border-red-300 bg-red-50' 
+                      : dept.storageStatus === 'warning'
+                      ? 'border-yellow-300 bg-yellow-50'
+                      : 'border-gray-200'
+                  }`}
+                >
+                  {/* Department Header with Warning Icon */}
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">{dept.department}</h3>
+                    <div className="flex items-center">
+                      <h3 className="text-lg font-semibold text-gray-800">{dept.department}</h3>
+                      {dept.storageStatus === 'critical' && (
+                        <span className="ml-2 text-red-500 text-sm animate-pulse" title="Critical Storage">
+                          🔴
+                        </span>
+                      )}
+                      {dept.storageStatus === 'warning' && (
+                        <span className="ml-2 text-yellow-500 text-sm" title="Storage Warning">
+                          🟡
+                        </span>
+                      )}
+                    </div>
                     <span className="text-3xl">📊</span>
                   </div>
+
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Total Submissions</span>
-                      <span className="text-lg font-bold text-gray-800">{dept.totalSubmissions || 0}</span>
+                    {/* Storage Progress Bar with Warning Colors */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700">Storage Usage</span>
+                        <span className={`text-sm font-bold ${
+                          dept.storageStatus === 'critical' ? 'text-red-600' :
+                          dept.storageStatus === 'warning' ? 'text-yellow-600' :
+                          'text-gray-600'
+                        }`}>
+                          {dept.storagePercentage}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className={`h-3 rounded-full transition-all ${
+                            dept.storageStatus === 'critical' ? 'bg-red-500' :
+                            dept.storageStatus === 'warning' ? 'bg-yellow-500' :
+                            'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(dept.storagePercentage, 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>{dept.totalStorage}</span>
+                        <span>Max: {dept.maxStorageFormatted}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Staff Members</span>
-                      <span className="text-lg font-bold text-gray-800">{dept.staffCount || 0}</span>
+
+                    {/* Storage Warning Message */}
+                    {dept.storageStatus === 'critical' && (
+                      <div className="p-2 bg-red-100 border border-red-300 rounded text-center">
+                        <p className="text-red-700 text-xs font-semibold">
+                          🚨 CRITICAL: {dept.storagePercentage}% storage used
+                        </p>
+                      </div>
+                    )}
+
+                    {dept.storageStatus === 'warning' && (
+                      <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-center">
+                        <p className="text-yellow-700 text-xs font-semibold">
+                          ⚠️ WARNING: {dept.storagePercentage}% storage used
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Department Stats */}
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Staff</span>
+                        <span className="font-bold text-gray-800">{dept.staffCount || 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Total Cards</span>
+                        <span className="font-bold text-gray-800">{dept.totalCards || 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Submissions</span>
+                        <span className="font-bold text-gray-800">{dept.totalSubmissions || 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Files</span>
+                        <span className="font-bold text-blue-600">{dept.totalFiles || 0}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Completed Cards</span>
-                      <span className="text-lg font-bold text-green-600">{dept.completedCards || 0}</span>
+
+                    {/* Completion Progress */}
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-500">Completion Rate</span>
+                        <span className="text-gray-500">{dept.completionRate}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-green-500 h-2 rounded-full transition-all"
+                          style={{ width: `${dept.completionRate || 0}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Pending Cards</span>
-                      <span className="text-lg font-bold text-orange-600">{dept.pendingCards || 0}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 mt-3">
-                      <div
-                        className="bg-green-500 h-3 rounded-full transition-all"
-                        style={{ width: `${dept.completionRate || 0}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {dept.completionRate || 0}% completion rate
-                    </p>
                   </div>
                 </div>
               ))
