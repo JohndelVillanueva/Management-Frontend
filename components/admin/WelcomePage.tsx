@@ -12,77 +12,89 @@ const CardSubmissionAnalytics = () => {
 
   const [realtimeMetrics, setRealtimeMetrics] = useState({
     activeTeachers: 0,
-    submittedToday: 0,
-    pendingNow: 0,
-    dueToday: 0,
   });
 
   const [myCards, setMyCards] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [departmentStats, setDepartmentStats] = useState([]);
+  const [departmentStorage, setDepartmentStorage] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Fetch all data
-const fetchData = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      throw new Error('No authentication token found');
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const [statsRes, realtimeRes, cardsRes, deptRes, activityRes, storageRes] = await Promise.all([
+        fetch('http://localhost:3000/activities/stats/overview', { headers }),
+        fetch('http://localhost:3000/activities/stats/realtime', { headers }),
+        fetch('http://localhost:3000/cards/analytics/cards', { headers }),
+        fetch('http://localhost:3000/activities/stats/departments', { headers }),
+        fetch('http://localhost:3000/activities/recent?limit=8', { headers }),
+        fetch('http://localhost:3000/departments/storage', { headers })
+      ]);
+
+      if (!statsRes.ok || !realtimeRes.ok || !cardsRes.ok || !deptRes.ok || !activityRes.ok || !storageRes.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
+      const [stats, realtime, cards, dept, activity, storage] = await Promise.all([
+        statsRes.json(),
+        realtimeRes.json(),
+        cardsRes.json(),
+        deptRes.json(),
+        activityRes.json(),
+        storageRes.json()
+      ]);
+
+      setSubmissionStats(stats);
+      setRealtimeMetrics(realtime);
+      setMyCards(cards);
+      setDepartmentStats(dept);
+      setRecentActivity(activity);
+      setDepartmentStorage(storage);
+      setLoading(false);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err.message);
+      setLoading(false);
     }
-
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
-
-    const [statsRes, realtimeRes, cardsRes, deptRes, activityRes] = await Promise.all([
-      fetch('http://localhost:3000/activities/stats/overview', { headers }),
-      fetch('http://localhost:3000/activities/stats/realtime', { headers }),
-      fetch('http://localhost:3000/cards/analytics/cards', { headers }), // Updated URL with auth
-      fetch('http://localhost:3000/activities/stats/departments', { headers }),
-      fetch('http://localhost:3000/activities/recent?limit=8', { headers })
-    ]);
-
-    if (!statsRes.ok || !realtimeRes.ok || !cardsRes.ok || !deptRes.ok || !activityRes.ok) {
-      throw new Error('Failed to fetch data');
-    }
-
-    const [stats, realtime, cards, dept, activity] = await Promise.all([
-      statsRes.json(),
-      realtimeRes.json(),
-      cardsRes.json(),
-      deptRes.json(),
-      activityRes.json()
-    ]);
-
-    setSubmissionStats(stats);
-    setRealtimeMetrics(realtime);
-    setMyCards(cards);
-    setDepartmentStats(dept);
-    setRecentActivity(activity);
-    setLoading(false);
-  } catch (err) {
-    console.error('Fetch error:', err);
-    setError(err.message);
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchData();
 
     // Refresh realtime metrics and activity every 10 seconds
     const interval = setInterval(() => {
-      fetch("/api/admin/stats/realtime")
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      fetch("http://localhost:3000/activities/stats/realtime", { headers })
         .then((res) => res.json())
         .then((data) => setRealtimeMetrics(data))
         .catch(console.error);
 
-      fetch("/api/admin/activities/recent?limit=8")
+      fetch("http://localhost:3000/activities/recent?limit=8", { headers })
         .then((res) => res.json())
         .then((data) => setRecentActivity(data))
+        .catch(console.error);
+
+      fetch("http://localhost:3000/departments/storage", { headers })
+        .then((res) => res.json())
+        .then((data) => setDepartmentStorage(data))
         .catch(console.error);
     }, 10000);
 
@@ -188,7 +200,6 @@ const fetchData = async () => {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              {/* <h1 className="text-4xl font-bold text-gray-800">Card Submission Analytics</h1> */}
               <p className="text-lg text-gray-600 mt-2">
                 Administrator Dashboard • All Departments
               </p>
@@ -202,7 +213,7 @@ const fetchData = async () => {
           </div>
         </div>
 
-        {/* Real-time Metrics */}
+        {/* Real-time Metrics - Only Active Teachers */}
         <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold text-gray-800">
@@ -213,31 +224,63 @@ const fetchData = async () => {
               Updating in real-time
             </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1">
             <RealtimeMetricCard
               title="Active Teachers"
               value={realtimeMetrics.activeTeachers}
               unit="online now"
               color="#f59e0b"
             />
-            <RealtimeMetricCard
-              title="Submitted Today"
-              value={realtimeMetrics.submittedToday}
-              unit="cards"
-              color="#10b981"
-            />
-            <RealtimeMetricCard
-              title="Pending Department-Wide"
-              value={realtimeMetrics.pendingNow}
-              unit="cards"
-              color="#f59e0b"
-            />
-            <RealtimeMetricCard
-              title="Due Today"
-              value={realtimeMetrics.dueToday}
-              unit="cards"
-              color="#ef4444"
-            />
+          </div>
+        </div>
+
+        {/* Department Storage Data */}
+        <div className="mb-8 bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+            Department Stored Data
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {departmentStorage.length > 0 ? (
+              departmentStorage.map((dept, idx) => (
+                <div key={idx} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800">{dept.department}</h3>
+                    <span className="text-3xl">📊</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Total Submissions</span>
+                      <span className="text-lg font-bold text-gray-800">{dept.totalSubmissions || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Staff Members</span>
+                      <span className="text-lg font-bold text-gray-800">{dept.staffCount || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Completed Cards</span>
+                      <span className="text-lg font-bold text-green-600">{dept.completedCards || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Pending Cards</span>
+                      <span className="text-lg font-bold text-orange-600">{dept.pendingCards || 0}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 mt-3">
+                      <div
+                        className="bg-green-500 h-3 rounded-full transition-all"
+                        style={{ width: `${dept.completionRate || 0}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {dept.completionRate || 0}% completion rate
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center text-gray-500 py-8">
+                No department storage data available
+              </div>
+            )}
           </div>
         </div>
 
