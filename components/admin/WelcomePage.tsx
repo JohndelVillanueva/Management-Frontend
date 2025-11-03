@@ -559,137 +559,142 @@ const CardSubmissionAnalytics = () => {
           </div>
         </div>
 
-{/* My Cards Table - UPDATED */}
-<div className="bg-white rounded-lg shadow-md p-8 mb-8">
-  <h3 className="text-2xl font-semibold text-gray-800 mb-6">
-    All Posted Cards
-  </h3>
-  <div className="overflow-x-auto">
-    <table className="w-full">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-            Card Title
-          </th>
-          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-            Description
-          </th>
-          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-            Created Date
-          </th>
-          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-            Status
-          </th>
-          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-            Submissions
-          </th>
-          <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
-            Card Status
-          </th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-200">
-        {myCards.length > 0 ? (
-          myCards.map((card) => {
-            // Calculate submission count - check multiple possible properties
-            const submissionCount = 
-              card.submissionsCount ||  // From backend analytics
-              card.submissions ||       // Direct submissions array length
-              card._count?.submissions || // From Prisma _count
-              0;
+        {/* My Cards Table - SCROLLABLE VERSION */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+          <h3 className="text-2xl font-semibold text-gray-800 mb-6">
+            All Posted Cards
+          </h3>
+          <div 
+            className="overflow-x-auto max-h-96 overflow-y-auto"
+            style={{ 
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#f59e0b #f3f4f6'
+            }}
+          >
+            <table className="w-full">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Card Title
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Description
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Created Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Submissions
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 uppercase">
+                    Card Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {myCards.length > 0 ? (
+                  myCards.map((card) => {
+                    // Calculate submission count - check multiple possible properties
+                    const submissionCount = 
+                      card.submissionsCount ||  // From backend analytics
+                      card.submissions ||       // Direct submissions array length
+                      card._count?.submissions || // From Prisma _count
+                      0;
 
-            // Calculate expected submissions (staff count)
-            const staffCount = card.departments?.reduce((total, dept) => 
-              total + (dept.staffCount || 0), 0) || 0;
+                    // Calculate expected submissions (staff count)
+                    const staffCount = card.departments?.reduce((total, dept) => 
+                      total + (dept.staffCount || 0), 0) || 0;
 
-            return (
-              <tr key={card.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="flex items-center">
-                    <span className="text-orange-500 mr-3 text-2xl">
-                      📄
-                    </span>
-                    <div>
-                      <span className="font-medium text-gray-800 text-base block">
-                        {card.title || 'Untitled Card'}
-                      </span>
-                      {card.department && (
-                        <span className="text-xs text-gray-500 mt-1">
-                          {card.department}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-base text-gray-600 max-w-xs">
-                  <div className="truncate">
-                    {card.description || 'No description'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-base text-gray-600">
-                  {card.createdAt ? new Date(card.createdAt).toLocaleDateString() : 'N/A'}
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`px-3 py-1 text-sm rounded-full border ${
-                      card.isPublic 
-                        ? "text-green-600 bg-green-100 border-green-300"
-                        : "text-blue-600 bg-blue-100 border-blue-300"
-                    }`}
-                  >
-                    {card.isPublic ? "Public" : "Private"}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-col">
-                    <span className="text-base font-medium text-gray-800">
-                      {submissionCount} / {staffCount > 0 ? staffCount : 'N/A'}
-                    </span>
-                    <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
-                      <div
-                        className="bg-orange-500 h-2 rounded-full transition-all"
-                        style={{
-                          width: staffCount > 0 
-                            ? `${Math.min((submissionCount / staffCount) * 100, 100)}%`
-                            : '0%'
-                        }}
-                      />
-                    </div>
-                    {staffCount === 0 && (
-                      <span className="text-xs text-gray-500 mt-1">
-                        No staff in department
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`px-3 py-1 text-sm rounded-full border ${getStatusColor(
-                      card.status || 'active'
-                    )}`}
-                  >
-                    {card.status === 'active' ? 'Active' : (card.status || 'Active')}
-                  </span>
-                </td>
-              </tr>
-            );
-          })
-        ) : (
-          <tr>
-            <td
-              colSpan="6"
-              className="px-6 py-8 text-center text-gray-500"
-            >
-              No cards found
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-</div>
+                    return (
+                      <tr key={card.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <span className="text-orange-500 mr-3 text-2xl">
+                              📄
+                            </span>
+                            <div>
+                              <span className="font-medium text-gray-800 text-base block">
+                                {card.title || 'Untitled Card'}
+                              </span>
+                              {card.department && (
+                                <span className="text-xs text-gray-500 mt-1">
+                                  {card.department}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-base text-gray-600 max-w-xs">
+                          <div className="truncate">
+                            {card.description || 'No description'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-base text-gray-600">
+                          {card.createdAt ? new Date(card.createdAt).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-3 py-1 text-sm rounded-full border ${
+                              card.isPublic 
+                                ? "text-green-600 bg-green-100 border-green-300"
+                                : "text-blue-600 bg-blue-100 border-blue-300"
+                            }`}
+                          >
+                            {card.isPublic ? "Public" : "Private"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-base font-medium text-gray-800">
+                              {submissionCount} / {staffCount > 0 ? staffCount : 'N/A'}
+                            </span>
+                            <div className="w-24 bg-gray-200 rounded-full h-2 mt-1">
+                              <div
+                                className="bg-orange-500 h-2 rounded-full transition-all"
+                                style={{
+                                  width: staffCount > 0 
+                                    ? `${Math.min((submissionCount / staffCount) * 100, 100)}%`
+                                    : '0%'
+                                }}
+                              />
+                            </div>
+                            {staffCount === 0 && (
+                              <span className="text-xs text-gray-500 mt-1">
+                                No staff in department
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-3 py-1 text-sm rounded-full border ${getStatusColor(
+                              card.status || 'active'
+                            )}`}
+                          >
+                            {card.status === 'active' ? 'Active' : (card.status || 'Active')}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
+                      No cards found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        {/* Status Overview */}
         {/* Status Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Overall Status Breakdown */}
@@ -814,12 +819,18 @@ const CardSubmissionAnalytics = () => {
             </div>
           </div>
 
-          {/* Recent Submissions */}
+          {/* Recent Submissions - SCROLLABLE VERSION */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-6">
               Recent Submissions
             </h3>
-            <div className="space-y-4">
+            <div 
+              className="space-y-4 max-h-96 overflow-y-auto pr-2"
+              style={{ 
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#f59e0b #f3f4f6'
+              }}
+            >
               {recentActivity && recentActivity.length > 0 ? (
                 recentActivity.map((activity, idx) => (
                   <div

@@ -64,13 +64,13 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
   const [expiresAt, setExpiresAt] = useState<string>('');
   const [includeExpiration, setIncludeExpiration] = useState(false);
   const [userDepartmentInfo, setUserDepartmentInfo] = useState<Department | null>(null);
-  const [allowedFileTypes, setAllowedFileTypes] = useState<string[]>(['*']);
+  const [allowedFileTypes, setAllowedFileTypes] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState<'basic' | 'departments' | 'files' | 'settings'>('basic');
   const [completedSections, setCompletedSections] = useState({
     basic: false,
     departments: false,
     files: false,
-    settings: true // Settings is optional
+    settings: true
   });
 
   // Check if all required sections are completed
@@ -89,7 +89,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       isDepartmentsComplete = isAllDepartments || selectedDepartmentIds.length > 0;
     }
     
-    // Files validation (always true since we default to '*')
+    // Files validation
     const isFilesComplete = allowedFileTypes.length > 0;
 
     setCompletedSections(prev => ({
@@ -113,7 +113,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       setExpiresAt('');
       setIncludeExpiration(false);
       setUserDepartmentInfo(null);
-      setAllowedFileTypes(['*']);
+      setAllowedFileTypes([]);
       setActiveSection('basic');
       setCompletedSections({
         basic: false,
@@ -183,35 +183,14 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
             setDepartments([]);
             setSelectedDepartmentIds([]);
           });
+        
+        // CHANGED: Removed head users fetch for ADMIN
+        // No longer fetching head users for ADMIN users
       }
       
-      // Fetch head users (only for ADMIN)
-      if (user_type === 'ADMIN') {
-        fetch('http://localhost:3000/auth/heads', { headers })
-          .then(res => {
-            if (!res.ok) {
-              if (res.status === 401) {
-                throw new Error('Authentication failed. Please log in again.');
-              }
-              throw new Error('Failed to fetch head users');
-            }
-            return res.json();
-          })
-          .then(data => {
-            setHeadUsers(data);
-            setSelectedHeadId(null);
-          })
-          .catch((err) => {
-            const errorMsg = err.message || 'Could not load department heads.';
-            toast.error(errorMsg);
-            setHeadUsers([]);
-            setSelectedHeadId(null);
-          });
-      } else {
-        // For HEAD users, clear head users list
-        setHeadUsers([]);
-        setSelectedHeadId(null);
-      }
+      // For HEAD users, clear head users list
+      setHeadUsers([]);
+      setSelectedHeadId(null);
     }
   }, [open, user_type, user_department]);
 
@@ -275,7 +254,14 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       return;
     }
     
-    const finalHeadId = user_type === 'HEAD' ? null : selectedHeadId;
+    // Validate file types selection
+    if (allowedFileTypes.length === 0) {
+      toast.error('Please select at least one allowed file type');
+      return;
+    }
+    
+    // CHANGED: For ADMIN users, always set headId to null
+    const finalHeadId = null;
     
     let expirationDate: Date | null = null;
     if (includeExpiration && expiresAt) {
@@ -304,22 +290,21 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       setSelectedHeadId(null);
       setExpiresAt('');
       setIncludeExpiration(false);
-      setAllowedFileTypes(['*']);
+      setAllowedFileTypes([]);
       onClose();
     }
   };
 
   const handleFileTypeToggle = (value: string) => {
     if (value === '*') {
+      // If "All File Types" is selected, clear other selections and select only this
       setAllowedFileTypes(['*']);
     } else {
       let newTypes = allowedFileTypes.filter(t => t !== '*');
       
       if (newTypes.includes(value)) {
         newTypes = newTypes.filter(t => t !== value);
-        if (newTypes.length === 0) {
-          newTypes = ['*'];
-        }
+        // Don't auto-select '*' when empty - let user choose explicitly
       } else {
         newTypes.push(value);
       }
@@ -394,7 +379,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       )}
     >
       <div className="max-h-[70vh] overflow-y-auto">
-{/* Progress Indicator */}
+        {/* Progress Indicator */}
         <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Progress</h3>
@@ -603,31 +588,8 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
               </div>
             )}
 
-            {/* Head user dropdown - only for ADMIN users */}
-            {user_type === 'ADMIN' && headUsers.length > 0 && (
-              <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center">
-                  <span className="text-purple-500 mr-2">👤</span>
-                  Department Head (Optional)
-                </label>
-                <p className="text-xs text-gray-500 mb-3">Designate a head for this card</p>
-                <select
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white"
-                  value={selectedHeadId ?? ''}
-                  onChange={e => setSelectedHeadId(Number(e.target.value))}
-                  disabled={loading}
-                >
-                  <option value="">Select Department Head (Optional)</option>
-                  {headUsers.map((head) => (
-                    <option key={head.id} value={head.id}>
-                      {head.first_name} {head.last_name} - {head.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* For HEAD users, show message about auto-assignment */}
+            {/* CHANGED: Removed Head user dropdown for ADMIN users */}
+            {/* Only show head user dropdown for HEAD users */}
             {user_type === 'HEAD' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center">
@@ -651,6 +613,18 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
               </h3>
               <p className="text-sm text-gray-600">Select which file types staff can submit for this card</p>
             </div>
+
+            {/* Warning message when no file types are selected */}
+            {allowedFileTypes.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <span className="text-yellow-600 text-lg mr-2">⚠️</span>
+                  <p className="text-sm text-yellow-800">
+                    <strong>No file types selected.</strong> Please choose at least one file type to complete this section.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto p-2">
               {FILE_TYPE_OPTIONS.map((option) => (
@@ -689,13 +663,18 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
                 <div>
                   <p className={`text-sm font-medium ${completedSections.files ? 'text-green-800' : 'text-purple-800'}`}>
                     <strong>Selected File Types:</strong> {
-                      allowedFileTypes.includes('*') 
-                        ? 'All file types allowed' 
-                        : allowedFileTypes.map(type => type.replace(/,/g, ', ')).join(', ')
+                      allowedFileTypes.length === 0 
+                        ? 'No file types selected' 
+                        : allowedFileTypes.includes('*') 
+                          ? 'All file types allowed' 
+                          : allowedFileTypes.map(type => type.replace(/,/g, ', ')).join(', ')
                     }
                   </p>
                   <p className="text-xs text-purple-600 mt-1">
-                    Staff will only be able to submit files with the selected types
+                    {allowedFileTypes.length === 0 
+                      ? 'You must select at least one file type to complete this section'
+                      : 'Staff will only be able to submit files with the selected types'
+                    }
                   </p>
                 </div>
               </div>
