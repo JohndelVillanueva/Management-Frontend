@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, UserCircleIcon, BuildingOfficeIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 
 interface Department {
   id: number;
   name: string;
+  code: string;
 }
 
 interface EditUserModalProps {
@@ -15,7 +16,7 @@ interface EditUserModalProps {
     last_name: string;
     email: string;
     user_type: string;
-    department?: { name: string; id?: number }; // ✅ Fixed: made id optional
+    department?: { name: string; id?: number };
   } | null;
   onSave: (updatedUser: any) => void;
   isLoading?: boolean;
@@ -39,8 +40,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  // ✅ Load departments
+  // Load departments
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
@@ -75,7 +77,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   }, [isOpen]);
 
-  // ✅ Update form when modal opens or userData changes
+  // Update form when modal opens or userData changes
   useEffect(() => {
     if (userData) {
       setFormData({
@@ -86,17 +88,26 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         departmentId: userData.department?.id ? String(userData.department.id) : "",
       });
       setFormErrors({});
+      setTouched({});
     }
-  }, [userData, isOpen]); // Added isOpen to dependency
+  }, [userData, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     
+    // Mark field as touched
+    setTouched(prev => ({ ...prev, [name]: true }));
+    
     // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: "" }));
     }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
   };
 
   const validateForm = (): boolean => {
@@ -132,6 +143,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Mark all fields as touched on submit
+    const allTouched = Object.keys(formData).reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {} as Record<string, boolean>);
+    setTouched(allTouched);
+    
     if (!validateForm()) {
       return;
     }
@@ -142,7 +160,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       departmentId: formData.departmentId ? parseInt(formData.departmentId) : null,
     };
 
-    console.log("🟡 Sending updated user data:", updatedUser); // Debug log
     onSave(updatedUser);
   };
 
@@ -152,164 +169,236 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   };
 
+  // Helper to determine if field should show error
+  const shouldShowError = (fieldName: string) => {
+    return touched[fieldName] && formErrors[fieldName];
+  };
+
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Edit User</h2>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="text-gray-500 hover:text-gray-700 rounded-full p-1 disabled:opacity-50 transition-colors"
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-orange-600 to-orange-700 px-6 py-5 rounded-t-3xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <UserCircleIcon className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Edit User</h2>
+                <p className="text-orange-100 text-sm mt-1">
+                  Update user information and permissions
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              disabled={isLoading}
+              className="text-white/80 hover:text-white rounded-lg p-2 hover:bg-white/10 transition-all duration-200 disabled:opacity-50"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* First Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              First Name *
-            </label>
-            <input
-              type="text"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              disabled={isLoading}
-              className={`mt-1 w-full border ${
-                formErrors.first_name ? "border-red-300" : "border-gray-300"
-              } rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 transition-colors`}
-              placeholder="Enter first name"
-            />
-            {formErrors.first_name && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.first_name}</p>
-            )}
-          </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+          {/* Name Row */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* First Name */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                <UserCircleIcon className="h-4 w-4 text-gray-400 mr-2" />
+                First Name *
+              </label>
+              <input
+                type="text"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={isLoading}
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none transition-all duration-200 ${
+                  shouldShowError('first_name') 
+                    ? "border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                    : "border-gray-300 bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                placeholder="John"
+              />
+              {shouldShowError('first_name') && (
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                  {formErrors.first_name}
+                </p>
+              )}
+            </div>
 
-          {/* Last Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Last Name *
-            </label>
-            <input
-              type="text"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              disabled={isLoading}
-              className={`mt-1 w-full border ${
-                formErrors.last_name ? "border-red-300" : "border-gray-300"
-              } rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 transition-colors`}
-              placeholder="Enter last name"
-            />
-            {formErrors.last_name && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.last_name}</p>
-            )}
+            {/* Last Name */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={isLoading}
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none transition-all duration-200 ${
+                  shouldShowError('last_name') 
+                    ? "border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                    : "border-gray-300 bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                placeholder="Doe"
+              />
+              {shouldShowError('last_name') && (
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                  {formErrors.last_name}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email *
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+              <EnvelopeIcon className="h-4 w-4 text-gray-400 mr-2" />
+              Email Address *
             </label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
+              onBlur={handleBlur}
               disabled={isLoading}
-              className={`mt-1 w-full border ${
-                formErrors.email ? "border-red-300" : "border-gray-300"
-              } rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 transition-colors`}
-              placeholder="Enter email address"
+              className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none transition-all duration-200 ${
+                shouldShowError('email') 
+                  ? "border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                  : "border-gray-300 bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              placeholder="john.doe@example.com"
             />
-            {formErrors.email && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+            {shouldShowError('email') && (
+              <p className="mt-2 text-sm text-red-600 flex items-center">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                {formErrors.email}
+              </p>
             )}
           </div>
 
           {/* User Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              User Type *
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Role / User Type *
             </label>
-            <select
-              name="user_type"
-              value={formData.user_type}
-              onChange={handleChange}
-              disabled={isLoading}
-              className={`mt-1 w-full border ${
-                formErrors.user_type ? "border-red-300" : "border-gray-300"
-              } rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 transition-colors`}
-            >
-              <option value="">Select User Type</option>
-              <option value="ADMIN">Admin</option>
-              <option value="HEAD">Head</option>
-              <option value="STAFF">Staff</option>
-            </select>
-            {formErrors.user_type && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.user_type}</p>
+            <div className="relative">
+              <select
+                name="user_type"
+                value={formData.user_type}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={isLoading}
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none appearance-none transition-all duration-200 ${
+                  shouldShowError('user_type') 
+                    ? "border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                    : "border-gray-300 bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <option value="">Select a role</option>
+                <option value="ADMIN" className="font-medium">👑 Administrator</option>
+                <option value="HEAD" className="font-medium">👨‍💼 Department Head</option>
+                <option value="STAFF" className="font-medium">👥 Staff Member</option>
+              </select>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            {shouldShowError('user_type') && (
+              <p className="mt-2 text-sm text-red-600 flex items-center">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                {formErrors.user_type}
+              </p>
             )}
           </div>
 
-          {/* ✅ FIXED Department Dropdown */}
+          {/* Department */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+              <BuildingOfficeIcon className="h-4 w-4 text-gray-400 mr-2" />
               Department {formData.user_type === "HEAD" && "*"}
             </label>
-            <select
-              name="departmentId"
-              value={formData.departmentId}
-              onChange={handleChange}
-              disabled={isLoading || loadingDepts}
-              className={`mt-1 w-full border ${
-                formErrors.departmentId ? "border-red-300" : "border-gray-300"
-              } rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:opacity-50 transition-colors`}
-            >
-              <option value="">-- Select Department --</option>
-              {loadingDepts ? (
-                <option value="" disabled>Loading departments...</option>
-              ) : (
-                departments.map((dept) => (
-                  <option 
-                    key={dept.id} 
-                    value={String(dept.id)}
-                    className={dept.id === userData?.department?.id ? "font-semibold bg-gray-100" : ""}
-                  >
-                    {dept.name} {dept.id === userData?.department?.id && "(Current)"}
-                  </option>
-                ))
-              )}
-            </select>
-            {formErrors.departmentId && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.departmentId}</p>
+            <div className="relative">
+              <select
+                name="departmentId"
+                value={formData.departmentId}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                disabled={isLoading || loadingDepts}
+                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none appearance-none transition-all duration-200 ${
+                  shouldShowError('departmentId') 
+                    ? "border-red-300 bg-red-50 focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                    : "border-gray-300 bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <option value="">Select department</option>
+                {loadingDepts ? (
+                  <option value="" disabled>Loading departments...</option>
+                ) : (
+                  departments.map((dept) => (
+                    <option 
+                      key={dept.id} 
+                      value={String(dept.id)}
+                      className={`${dept.id === userData?.department?.id ? "bg-orange-50 text-orange-700 font-semibold" : ""}`}
+                    >
+                      {dept.name} ({dept.code}) {dept.id === userData?.department?.id && "• Current"}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            {shouldShowError('departmentId') && (
+              <p className="mt-2 text-sm text-red-600 flex items-center">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                {formErrors.departmentId}
+              </p>
             )}
-            {formErrors.departments && (
-              <p className="mt-1 text-sm text-red-600">{formErrors.departments}</p>
+            {formData.user_type === "HEAD" && !shouldShowError('departmentId') && (
+              <p className="mt-2 text-xs text-gray-500 flex items-center">
+                <span className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2"></span>
+                Department heads must be assigned to a specific department
+              </p>
             )}
           </div>
 
-          {/* Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
             <button
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors font-medium"
+              className="px-6 py-3 bg-white text-gray-700 text-sm font-medium rounded-xl border border-gray-300 hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium flex items-center justify-center min-w-[120px]"
+              className="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white text-sm font-medium rounded-xl hover:from-orange-700 hover:to-orange-800 disabled:opacity-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center min-w-[140px]"
             >
               {isLoading ? (
                 <>
@@ -320,7 +409,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   Saving...
                 </>
               ) : (
-                "Save Changes"
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Save Changes
+                </>
               )}
             </button>
           </div>

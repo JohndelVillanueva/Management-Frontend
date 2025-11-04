@@ -7,7 +7,8 @@ import {
   UserGroupIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
-import DepartmentModal from '../modals/DepartmentModal';
+import CreateDepartmentModal from '../modals/CreateDepartmentModal';
+import UpdateDepartmentModal from '../modals/UpdateDepartmentModal';
 import toast from 'react-hot-toast';
 
 interface Department {
@@ -27,7 +28,8 @@ const Departments = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,13 +62,12 @@ const Departments = () => {
   };
 
   const handleCreateDepartment = () => {
-    setEditingDepartment(null);
-    setModalOpen(true);
+    setCreateModalOpen(true);
   };
 
   const handleEditDepartment = (department: Department) => {
     setEditingDepartment(department);
-    setModalOpen(true);
+    setUpdateModalOpen(true);
   };
 
   const handleDeleteDepartment = async (id: number) => {
@@ -130,13 +131,13 @@ const Departments = () => {
           dept.id === editingDepartment.id ? savedDepartment : dept
         ));
         toast.success('Department updated successfully!');
+        setUpdateModalOpen(false);
+        setEditingDepartment(null);
       } else {
         setDepartments([...departments, savedDepartment]);
         toast.success('Department created successfully!');
+        setCreateModalOpen(false);
       }
-
-      setModalOpen(false);
-      setEditingDepartment(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : `Failed to ${editingDepartment ? 'update' : 'create'} department`;
       toast.error(errorMessage);
@@ -146,12 +147,16 @@ const Departments = () => {
     }
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
+  const closeCreateModal = () => {
+    setCreateModalOpen(false);
+  };
+
+  const closeUpdateModal = () => {
+    setUpdateModalOpen(false);
     setEditingDepartment(null);
   };
 
-  // ... rest of your component remains the same until the return statement
+  // ... (loading state, error display, and department grid rendering remain the same)
 
   return (
     <div className="h-screen bg-gray-50 overflow-y-auto overflow-x-hidden">
@@ -171,7 +176,7 @@ const Departments = () => {
           </button>
         </div>
 
-        {/* Error Message - Keep this for initial load errors */}
+        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-8 text-base">
             {error}
@@ -258,11 +263,19 @@ const Departments = () => {
         <div className="h-32"></div>
       </div>
 
-      {/* Department Modal */}
-      <DepartmentModal
-        open={modalOpen}
-        onClose={closeModal}
-        editingDepartment={editingDepartment}
+      {/* Create Department Modal */}
+      <CreateDepartmentModal
+        open={createModalOpen}
+        onClose={closeCreateModal}
+        onSubmit={handleSubmit}
+        loading={submitting}
+      />
+
+      {/* Update Department Modal */}
+      <UpdateDepartmentModal
+        open={updateModalOpen}
+        onClose={closeUpdateModal}
+        department={editingDepartment}
         onSubmit={handleSubmit}
         loading={submitting}
       />

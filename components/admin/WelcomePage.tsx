@@ -345,12 +345,12 @@ const CardSubmissionAnalytics = () => {
                 Administrator Dashboard • All Departments
               </p>
             </div>
-            <div className="bg-orange-100 px-6 py-3 rounded-lg">
+            {/* <div className="bg-orange-100 px-6 py-3 rounded-lg">
               <p className="text-base text-gray-600">Overall Completion</p>
               <p className="text-3xl font-bold text-orange-700">
                 {submissionStats.completionRate || 0}%
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
 
