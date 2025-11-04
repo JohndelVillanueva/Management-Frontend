@@ -8,6 +8,7 @@ import {
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import DepartmentModal from '../modals/DepartmentModal';
+import toast from 'react-hot-toast';
 
 interface Department {
   id: number;
@@ -50,7 +51,9 @@ const Departments = () => {
       const data = await response.json();
       setDepartments(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load departments');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load departments';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -71,33 +74,41 @@ const Departments = () => {
       return;
     }
 
-    try {
-      const response = await fetch(`http://localhost:3000/departments/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete department');
+    const deletePromise = fetch(`http://localhost:3000/departments/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
       }
+    });
 
-      setDepartments(departments.filter(dept => dept.id !== id));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete department');
-    }
+    toast.promise(
+      deletePromise,
+      {
+        loading: 'Deleting department...',
+        success: (response) => {
+          if (!response.ok) {
+            throw new Error('Failed to delete department');
+          }
+          setDepartments(departments.filter(dept => dept.id !== id));
+          return 'Department deleted successfully';
+        },
+        error: (err) => {
+          return err instanceof Error ? err.message : 'Failed to delete department';
+        },
+      }
+    );
   };
 
   const handleSubmit = async (formData: { name: string; code: string; description: string }) => {
     setSubmitting(true);
+    
+    const url = editingDepartment 
+      ? `http://localhost:3000/departments/${editingDepartment.id}`
+      : 'http://localhost:3000/departments';
+    
+    const method = editingDepartment ? 'PUT' : 'POST';
+
     try {
-      const url = editingDepartment 
-        ? `http://localhost:3000/departments/${editingDepartment.id}`
-        : 'http://localhost:3000/departments';
-      
-      const method = editingDepartment ? 'PUT' : 'POST';
-      
       const response = await fetch(url, {
         method,
         headers: {
@@ -108,7 +119,8 @@ const Departments = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save department');
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to ${editingDepartment ? 'update' : 'create'} department`);
       }
 
       const savedDepartment = await response.json();
@@ -117,14 +129,18 @@ const Departments = () => {
         setDepartments(departments.map(dept => 
           dept.id === editingDepartment.id ? savedDepartment : dept
         ));
+        toast.success('Department updated successfully!');
       } else {
         setDepartments([...departments, savedDepartment]);
+        toast.success('Department created successfully!');
       }
 
       setModalOpen(false);
       setEditingDepartment(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save department');
+      const errorMessage = err instanceof Error ? err.message : `Failed to ${editingDepartment ? 'update' : 'create'} department`;
+      toast.error(errorMessage);
+      console.error('Department operation error:', err);
     } finally {
       setSubmitting(false);
     }
@@ -135,27 +151,7 @@ const Departments = () => {
     setEditingDepartment(null);
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen bg-gray-50 overflow-y-auto">
-        <div className="w-full p-8">
-          <div className="animate-pulse">
-            <div className="h-10 bg-gray-200 rounded w-1/4 mb-3"></div>
-            <div className="h-5 bg-gray-200 rounded w-1/2 mb-8"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm p-8">
-                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // ... rest of your component remains the same until the return statement
 
   return (
     <div className="h-screen bg-gray-50 overflow-y-auto overflow-x-hidden">
@@ -175,7 +171,7 @@ const Departments = () => {
           </button>
         </div>
 
-        {/* Error Message */}
+        {/* Error Message - Keep this for initial load errors */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-8 text-base">
             {error}
