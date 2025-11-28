@@ -220,11 +220,11 @@ const UsersPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteUser = (userId: number, userName: string) => {
-    if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
-      console.log("Delete user:", userId);
-    }
-  };
+  // const handleDeleteUser = (userId: number, userName: string) => {
+  //   if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
+  //     console.log("Delete user:", userId);
+  //   }
+  // };
 
   // ✅ FIXED: Save updates from modal with API call
   const handleSaveUser = async (updatedUser: any) => {

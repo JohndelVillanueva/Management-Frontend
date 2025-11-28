@@ -6,12 +6,9 @@ import {
   UserIcon,
   IdentificationIcon,
   ShieldCheckIcon,
-  BuildingOfficeIcon,
-  UserGroupIcon,
   BuildingLibraryIcon,
   AcademicCapIcon,
   AtSymbolIcon,
-  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 
 export default function SignupPage() {
@@ -36,49 +33,25 @@ export default function SignupPage() {
   const navigate = useNavigate();
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const [departments, setDepartments] = useState<
-    { id: string; name: string }[]
-  >([]);
-  const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(false);
-  const [departmentError, setDepartmentError] = useState("");
-
-  // Fetch departments with AbortController
+  // Fetch departments with AbortController (keeping the function but removing unused state)
   useEffect(() => {
     const abortController = new AbortController();
 
     const fetchDepartments = async () => {
-      setIsDepartmentsLoading(true);
-      setDepartmentError("");
-
       try {
-        const response = await fetch(`${baseUrl}/departments`, {
+        await fetch(`${baseUrl}/departments`, {
           signal: abortController.signal,
         });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        setDepartments(data || []);
+        // Departments are not used in the form anymore, but we keep the API call
+        // to maintain the existing structure
       } catch (err) {
-        if (!abortController.signal.aborted) {
-          setDepartmentError(
-            err instanceof Error ? err.message : "Failed to load departments"
-          );
-          setDepartments([]);
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setIsDepartmentsLoading(false);
-        }
+        // Silently handle error since departments are not used
       }
     };
 
     fetchDepartments();
     return () => abortController.abort();
-  }, []);
+  }, [baseUrl]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -187,13 +160,13 @@ export default function SignupPage() {
           throw new Error(`${errorData.error}: ${errorData.details}`);
         } else if (errorData.missing && typeof errorData.missing === 'object') {
           const missingFields = Object.entries(errorData.missing)
-            .filter(([field, isMissing]) => isMissing)
+            .filter(([, isMissing]) => isMissing)
             .map(([field]) => field)
             .join(', ');
           throw new Error(`${errorData.error}: Missing required fields: ${missingFields}`);
         } else if (errorData.details && typeof errorData.details === 'object') {
           const missingFields = Object.entries(errorData.details)
-            .filter(([field, isMissing]) => isMissing)
+            .filter(([, isMissing]) => isMissing)
             .map(([field]) => field)
             .join(', ');
           throw new Error(`${errorData.error}: Missing required fields: ${missingFields}`);

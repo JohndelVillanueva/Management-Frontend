@@ -1,7 +1,71 @@
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
+
+interface SubmissionStats {
+  totalCards: number;
+  submitted: number;
+  pending: number;
+  overdue: number;
+  completionRate: number;
+  avgSubmissionTime: string;
+}
+
+interface RealtimeMetrics {
+  activeTeachers: number;
+}
+
+interface DepartmentStat {
+  department: string;
+  totalCards: number;
+  completedCards: number;
+  completionRate: string | number;
+  display?: string;
+}
+
+interface DepartmentStorage {
+  department: string;
+  storageStatus: string;
+  storagePercentage: number;
+  totalStorage: string;
+  maxStorageFormatted: string;
+  staffCount: number;
+  totalCards: number;
+  totalSubmissions: number;
+  totalFiles: number;
+  completionRate: number;
+}
+
+interface Card {
+  id: number;
+  title: string;
+  description?: string;
+  department?: string;
+  createdAt?: string;
+  isPublic?: boolean;
+  status?: string;
+  submissionsCount?: number;
+  submissions?: number;
+  _count?: {
+    submissions: number;
+  };
+  departments?: Array<{
+    staffCount: number;
+  }>;
+}
+
+interface Activity {
+  id?: number;
+  teacher?: string;
+  user?: string;
+  action?: string;
+  card?: string;
+  description?: string;
+  time?: string;
+  createdAt?: string;
+  department?: string;
+}
 
 const CardSubmissionAnalytics = () => {
-  const [submissionStats, setSubmissionStats] = useState({
+  const [submissionStats, setSubmissionStats] = useState<SubmissionStats>({
     totalCards: 0,
     submitted: 0,
     pending: 0,
@@ -10,45 +74,18 @@ const CardSubmissionAnalytics = () => {
     avgSubmissionTime: "0 days",
   });
 
-  const [realtimeMetrics, setRealtimeMetrics] = useState({
+  const [realtimeMetrics, setRealtimeMetrics] = useState<RealtimeMetrics>({
     activeTeachers: 0,
   });
 
-  const [myCards, setMyCards] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [departmentStats, setDepartmentStats] = useState([]);
-  const [departmentStorage, setDepartmentStorage] = useState([]);
+  const [myCards, setMyCards] = useState<Card[]>([]);
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+  const [departmentStats, setDepartmentStats] = useState<DepartmentStat[]>([]);
+  const [departmentStorage, setDepartmentStorage] = useState<DepartmentStorage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch all data
-  // Add this function to your frontend component
-  const generateSampleCards = (totalCards) => {
-    if (totalCards === 0) return [];
-
-    const sampleTitles = [
-      "Quarterly Report Submission",
-      "Faculty Development Program",
-      "Research Project Update",
-      "Department Meeting Minutes",
-      "Curriculum Review Document"
-    ];
-
-    const samplePostedBy = ["Admin Office", "Department Head", "Academic Committee"];
-
-    return Array.from({ length: totalCards }, (_, index) => ({
-      id: index + 1,
-      title: sampleTitles[index % sampleTitles.length],
-      postedBy: samplePostedBy[index % samplePostedBy.length],
-      deadline: new Date(Date.now() + (index + 1) * 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      priority: index === 0 ? "High" : index === 1 ? "Medium" : "Low",
-      submissions: Math.floor(Math.random() * 5),
-      totalStaff: 5,
-      status: index === 0 ? "In Progress" : "Pending"
-    }));
-  };
-
-  const fetchWithErrorHandling = async (url, endpointName, fallbackData = []) => {
+  const fetchWithErrorHandling = async (url: string, endpointName: string, fallbackData: any = []) => {
     try {
       console.log(`🌐 Fetching ${endpointName}:`, url);
       const token = localStorage.getItem('token');
@@ -61,7 +98,6 @@ const CardSubmissionAnalytics = () => {
       console.log(`📊 ${endpointName} Response Status:`, response.status);
 
       if (!response.ok) {
-        // TRY TO GET THE ACTUAL ERROR MESSAGE FROM BACKEND
         let errorDetails = '';
         try {
           const errorData = await response.json();
@@ -99,11 +135,10 @@ const CardSubmissionAnalytics = () => {
 
       console.log('🔐 Starting API calls with token');
 
-      // Make all API calls - UPDATED: Use new completion rates endpoint
       const [
         cardAnalytics,
         realtime,
-        deptCompletion,  // 👈 CHANGED: This now calls the new endpoint
+        deptCompletion,
         activity,
         storage
       ] = await Promise.all([
@@ -117,37 +152,36 @@ const CardSubmissionAnalytics = () => {
         fetchWithErrorHandling('http://localhost:3000/activities/stats/realtime', 'Realtime Stats', {
           activeTeachers: 0
         }),
-        // 👇 CHANGED: Use the new completion rates endpoint
         fetchWithErrorHandling('http://localhost:3000/departments/completion-rates', 'Department Completion Rates', []),
         fetchWithErrorHandling('http://localhost:3000/activities/recent?limit=8', 'Recent Activity', []),
         fetchWithErrorHandling('http://localhost:3000/departments/storage', 'Department Storage', [])
       ]);
 
-      // Set state with the data - UPDATED: Use new completion rates data
       setSubmissionStats({
         totalCards: cardAnalytics.totalCards || 0,
         submitted: cardAnalytics.totalSubmissions || 0,
         pending: Math.max(0, (cardAnalytics.totalCards || 0) - (cardAnalytics.totalSubmissions || 0)),
         overdue: 0,
         completionRate: cardAnalytics.totalCards > 0 ?
-          Math.round((cardAnalytics.totalSubmissions / cardAnalytics.totalCards) * 100) : 0
+          Math.round((cardAnalytics.totalSubmissions / cardAnalytics.totalCards) * 100) : 0,
+        avgSubmissionTime: "0 days"
       });
 
       const cardsData = cardAnalytics.recentCards || [];
       setMyCards(cardsData);
       setRealtimeMetrics(realtime);
-      setDepartmentStats(deptCompletion); // 👈 This now gets the proper completion data
+      setDepartmentStats(deptCompletion);
       setRecentActivity(activity);
       setDepartmentStorage(storage);
 
       console.log(`✅ All data loaded successfully`);
-      console.log(`📊 Department completion rates:`, deptCompletion); // Should show real data now
+      console.log(`📊 Department completion rates:`, deptCompletion);
 
       setLoading(false);
 
     } catch (err) {
       console.error('💥 Main fetch error:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
   };
@@ -162,7 +196,6 @@ const CardSubmissionAnalytics = () => {
   useEffect(() => {
     fetchData();
 
-    // Refresh realtime metrics and activity every 10 seconds
     const interval = setInterval(() => {
       const token = localStorage.getItem('token');
       const headers = {
@@ -185,13 +218,11 @@ const CardSubmissionAnalytics = () => {
         .then((data) => setDepartmentStorage(data))
         .catch(console.error);
 
-      // 👇 ADD: Refresh completion rates in the interval
       fetch("http://localhost:3000/departments/completion-rates", { headers })
         .then((res) => res.json())
         .then((data) => setDepartmentStats(data))
         .catch(console.error);
 
-      // Also refresh cards data in the interval
       fetch("http://localhost:3000/cards/analytics", { headers })
         .then((res) => res.json())
         .then((data) => {
@@ -201,7 +232,8 @@ const CardSubmissionAnalytics = () => {
             pending: Math.max(0, (data.totalCards || 0) - (data.totalSubmissions || 0)),
             overdue: 0,
             completionRate: data.totalCards > 0 ?
-              Math.round((data.totalSubmissions / data.totalCards) * 100) : 0
+              Math.round((data.totalSubmissions / data.totalCards) * 100) : 0,
+            avgSubmissionTime: "0 days"
           });
           const cardsData = data.recentCards || [];
           setMyCards(cardsData);
@@ -226,13 +258,11 @@ const CardSubmissionAnalytics = () => {
         console.log(`📊 completionRate property:`, dept.completionRate);
         console.log(`📊 display property:`, dept.display);
 
-        // Check if properties exist
         console.log(`📊 Has department?`, 'department' in dept);
         console.log(`📊 Has totalCards?`, 'totalCards' in dept);
         console.log(`📊 Has completedCards?`, 'completedCards' in dept);
         console.log(`📊 Has completionRate?`, 'completionRate' in dept);
 
-        // Calculate what the completion rate should be
         if (dept.totalCards > 0) {
           const calculatedRate = Math.round((dept.completedCards / dept.totalCards) * 100);
           console.log(`📊 Calculated completion rate:`, calculatedRate + '%');
@@ -241,20 +271,7 @@ const CardSubmissionAnalytics = () => {
     }
   }, [departmentStats]);
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "Urgent":
-        return "text-red-600 bg-red-100 border-red-300";
-      case "High":
-        return "text-orange-600 bg-orange-100 border-orange-300";
-      case "Medium":
-        return "text-yellow-600 bg-yellow-100 border-yellow-300";
-      default:
-        return "text-gray-600 bg-gray-100 border-gray-300";
-    }
-  };
-
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "Completed":
         return "text-green-600 bg-green-100 border-green-300";
@@ -269,7 +286,15 @@ const CardSubmissionAnalytics = () => {
     }
   };
 
-  const MetricCard = ({ title, value, subtitle, icon, color = "orange" }) => (
+  interface MetricCardProps {
+    title: string;
+    value: string | number;
+    subtitle?: string;
+    icon: string;
+    color?: string;
+  }
+
+  const MetricCard = ({ title, value, subtitle, icon, color = "orange" }: MetricCardProps) => (
     <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -282,7 +307,14 @@ const CardSubmissionAnalytics = () => {
     </div>
   );
 
-  const RealtimeMetricCard = ({ title, value, unit, color }) => (
+  interface RealtimeMetricCardProps {
+    title: string;
+    value: string | number;
+    unit: string;
+    color: string;
+  }
+
+  const RealtimeMetricCard = ({ title, value, unit, color }: RealtimeMetricCardProps) => (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-center justify-between mb-3">
         <span className="text-base text-gray-600">{title}</span>
@@ -345,16 +377,10 @@ const CardSubmissionAnalytics = () => {
                 Administrator Dashboard • All Departments
               </p>
             </div>
-            {/* <div className="bg-orange-100 px-6 py-3 rounded-lg">
-              <p className="text-base text-gray-600">Overall Completion</p>
-              <p className="text-3xl font-bold text-orange-700">
-                {submissionStats.completionRate || 0}%
-              </p>
-            </div> */}
           </div>
         </div>
 
-        {/* Metric Cards Grid - ADDED BACK */}
+        {/* Metric Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <MetricCard
             title="Total Cards Posted"
@@ -597,14 +623,12 @@ const CardSubmissionAnalytics = () => {
               <tbody className="divide-y divide-gray-200">
                 {myCards.length > 0 ? (
                   myCards.map((card) => {
-                    // Calculate submission count - check multiple possible properties
                     const submissionCount = 
-                      card.submissionsCount ||  // From backend analytics
-                      card.submissions ||       // Direct submissions array length
-                      card._count?.submissions || // From Prisma _count
+                      card.submissionsCount ||
+                      card.submissions ||
+                      card._count?.submissions ||
                       0;
 
-                    // Calculate expected submissions (staff count)
                     const staffCount = card.departments?.reduce((total, dept) => 
                       total + (dept.staffCount || 0), 0) || 0;
 
@@ -683,7 +707,7 @@ const CardSubmissionAnalytics = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan={6}
                       className="px-6 py-8 text-center text-gray-500"
                     >
                       No cards found
@@ -708,7 +732,7 @@ const CardSubmissionAnalytics = () => {
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">Completed</span>
                   <span className="font-semibold text-green-600">
-                    {submissionStats.submitted || submissionStats.completed || 0}
+                    {submissionStats.submitted}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
@@ -716,14 +740,14 @@ const CardSubmissionAnalytics = () => {
                     className="bg-green-500 h-4 rounded-full transition-all"
                     style={{
                       width: `${submissionStats.totalCards > 0
-                          ? Math.min(((submissionStats.submitted || submissionStats.completed || 0) / submissionStats.totalCards) * 100, 100)
+                          ? Math.min((submissionStats.submitted / submissionStats.totalCards) * 100, 100)
                           : 0
                         }%`,
                     }}
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  {submissionStats.submitted || submissionStats.completed || 0} / {submissionStats.totalCards || 0} cards
+                  {submissionStats.submitted} / {submissionStats.totalCards} cards
                 </p>
               </div>
 
@@ -732,7 +756,7 @@ const CardSubmissionAnalytics = () => {
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">In Progress</span>
                   <span className="font-semibold text-orange-600">
-                    {submissionStats.pending || submissionStats.inProgress || 0}
+                    {submissionStats.pending}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
@@ -740,14 +764,14 @@ const CardSubmissionAnalytics = () => {
                     className="bg-orange-500 h-4 rounded-full transition-all"
                     style={{
                       width: `${submissionStats.totalCards > 0
-                          ? Math.min(((submissionStats.pending || submissionStats.inProgress || 0) / submissionStats.totalCards) * 100, 100)
+                          ? Math.min((submissionStats.pending / submissionStats.totalCards) * 100, 100)
                           : 0
                         }%`,
                     }}
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  {submissionStats.pending || submissionStats.inProgress || 0} / {submissionStats.totalCards || 0} cards
+                  {submissionStats.pending} / {submissionStats.totalCards} cards
                 </p>
               </div>
 
@@ -756,7 +780,7 @@ const CardSubmissionAnalytics = () => {
                 <div className="flex justify-between text-base mb-2">
                   <span className="text-gray-600">Overdue</span>
                   <span className="font-semibold text-red-600">
-                    {submissionStats.overdue || 0}
+                    {submissionStats.overdue}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
@@ -764,14 +788,14 @@ const CardSubmissionAnalytics = () => {
                     className="bg-red-500 h-4 rounded-full transition-all"
                     style={{
                       width: `${submissionStats.totalCards > 0
-                          ? Math.min(((submissionStats.overdue || 0) / submissionStats.totalCards) * 100, 100)
+                          ? Math.min((submissionStats.overdue / submissionStats.totalCards) * 100, 100)
                           : 0
                         }%`,
                     }}
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  {submissionStats.overdue || 0} / {submissionStats.totalCards || 0} cards
+                  {submissionStats.overdue} / {submissionStats.totalCards} cards
                 </p>
               </div>
             </div>
@@ -798,7 +822,7 @@ const CardSubmissionAnalytics = () => {
                       <div
                         className="bg-orange-500 h-3 rounded-full transition-all"
                         style={{
-                          width: `${parseInt(dept.completionRate) || 0}%`
+                          width: `${parseInt(String(dept.completionRate)) || 0}%`
                         }}
                       />
                     </div>

@@ -1,10 +1,10 @@
 import WelcomePage from '../../components/staff/WelcomePage'; // Adjust the path as needed
 
-const HeadDashboard = () => {
+const StaffDashboard = () => {
   // TODO: Replace 'yourDepartmentValue' with the actual DepartmentType value for this head
   return ( 
-    <WelcomePage department={'Academics'} />
+    <WelcomePage />
    );
 }
  
-export default HeadDashboard;
+export default StaffDashboard;

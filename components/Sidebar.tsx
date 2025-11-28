@@ -5,8 +5,6 @@ import {
   HomeIcon,
   FolderIcon,
   UserGroupIcon,
-  CogIcon,
-  ChartBarIcon,
   DocumentTextIcon,
   AcademicCapIcon,
   BuildingOfficeIcon,

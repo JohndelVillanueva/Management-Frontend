@@ -44,7 +44,7 @@ const StaffManagement: React.FC = () => {
   const { user } = useAuth();
   
   // Check if user is HEAD (handle both old and new enum values)
-  const isHeadUser = user?.user_type === 'HEAD' || user?.user_type === 'DepartmentHead';
+  // const isHeadUser = user?.user_type === 'HEAD' || user?.user_type === 'DepartmentHead';
 
   useEffect(() => {
     const fetchStaff = async () => {

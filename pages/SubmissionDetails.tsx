@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link, useNavigate} from "react-router-dom";
-import ReactModal from "react-modal";
+import Modal from 'react-modal';
+import { useParams, useNavigate} from "react-router-dom";
 
 const SubmissionDetails = () => {
   const { submissionId } = useParams();
@@ -176,7 +176,7 @@ const SubmissionDetails = () => {
       </div>
 
       {/* Modal for file submission */}
-      <ReactModal
+      <Modal
         isOpen={modalOpen}
         onRequestClose={handleModalClose}
         style={customModalStyles}
@@ -248,7 +248,7 @@ const SubmissionDetails = () => {
             </button>
           </div>
         </form>
-      </ReactModal>
+      </Modal>
 
       {/* Google Drive-style file list */}
       <div className="p-6">
@@ -270,7 +270,7 @@ const SubmissionDetails = () => {
                     <div className="flex items-center">
                       <span>Last modified</span>
                       <svg className="ml-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
                     </div>
                   </th>
@@ -378,6 +378,6 @@ const customModalStyles = {
   },
 };
 
-ReactModal.setAppElement("#root");
+Modal.setAppElement("#root");
 
 export default SubmissionDetails;

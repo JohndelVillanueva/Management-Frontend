@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   DocumentTextIcon,
@@ -14,6 +14,58 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../context/AuthContext";
 
+interface DepartmentStats {
+  totalStaff: number;
+  activeStaff: number;
+  pendingSubmissions: number;
+  completedSubmissions: number;
+  totalCards: number;
+  activeCards: number;
+  overdueCount: number;
+  performance: number;
+}
+
+interface Activity {
+  id: string | number;
+  type: string;
+  title: string;
+  user: string;
+  time: string;
+  status: string;
+}
+
+interface Deadline {
+  id: string | number;
+  title: string;
+  deadline: string;
+  assignedTo: string;
+  priority: string;
+}
+
+interface Card {
+  id: string | number;
+  title: string;
+  expiresAt?: string;
+  createdAt?: string;
+}
+
+interface Submission {
+  id: string | number;
+  card?: Card;
+  user?: {
+    first_name?: string;
+    last_name?: string;
+  };
+  createdAt: string;
+}
+
+interface Department {
+  name: string;
+  _count?: {
+    users: number;
+  };
+}
+
 const HeadWelcomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -22,7 +74,7 @@ const HeadWelcomePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [departmentStats, setDepartmentStats] = useState({
+  const [departmentStats, setDepartmentStats] = useState<DepartmentStats>({
     totalStaff: 0,
     activeStaff: 0,
     pendingSubmissions: 0,
@@ -33,133 +85,133 @@ const HeadWelcomePage = () => {
     performance: 0
   });
 
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState<Deadline[]>([]);
 
   // Fetch all department data
-const fetchDepartmentData = async () => {
-  if (!user?.departmentId) {
-    setError('No department assigned');
-    setLoading(false);
-    return;
-  }
-
-  try {
-    setLoading(true);
-    
-    const [deptRes, cardsRes] = await Promise.all([
-      fetch(`http://localhost:3000/departments/${user.departmentId}`),
-      fetch(`http://localhost:3000/cards?departmentId=${user.departmentId}`)
-    ]);
-
-    if (!deptRes.ok || !cardsRes.ok) {
-      throw new Error('Failed to fetch department data');
+  const fetchDepartmentData = async () => {
+    if (!user?.departmentId) {
+      setError('No department assigned');
+      setLoading(false);
+      return;
     }
 
-    const [dept, cards] = await Promise.all([
-      deptRes.json(),
-      cardsRes.json()
-    ]);
+    try {
+      setLoading(true);
+      
+      const [deptRes, cardsRes] = await Promise.all([
+        fetch(`http://localhost:3000/departments/${user.departmentId}`),
+        fetch(`http://localhost:3000/cards?departmentId=${user.departmentId}`)
+      ]);
 
-    const totalStaff = dept._count?.users || 0;
-    const totalCards = cards.length;
-    const now = new Date();
+      if (!deptRes.ok || !cardsRes.ok) {
+        throw new Error('Failed to fetch department data');
+      }
 
-    // Get submissions for each card to calculate completion stats
-    const submissionsPromises = cards.map(card => 
-      fetch(`http://localhost:3000/submissions/${card.id}`).then(res => res.json())
-    );
-    
-    const allSubmissionsArrays = await Promise.all(submissionsPromises);
-    const allSubmissions = allSubmissionsArrays.flat();
+      const [dept, cards] = await Promise.all([
+        deptRes.json() as Promise<Department>,
+        cardsRes.json() as Promise<Card[]>
+      ]);
 
-    const completedSubmissions = allSubmissions.length;
-    
-    // FIX: Define totalExpectedSubmissions before using it
-    const totalExpectedSubmissions = totalStaff * totalCards;
-    const pendingSubmissions = Math.max(0, totalExpectedSubmissions - completedSubmissions);
-    
-    const performance = totalExpectedSubmissions > 0 
-      ? Math.round((completedSubmissions / totalExpectedSubmissions) * 100)
-      : 0;
+      const totalStaff = dept._count?.users || 0;
+      const totalCards = cards.length;
+      const now = new Date();
 
-    const overdueCount = cards.filter(card => 
-      card.expiresAt && new Date(card.expiresAt) < now
-    ).length;
+      // Get submissions for each card to calculate completion stats
+      const submissionsPromises = cards.map((card: Card) => 
+        fetch(`http://localhost:3000/submissions/${card.id}`).then(res => res.json())
+      );
+      
+      const allSubmissionsArrays = await Promise.all(submissionsPromises);
+      const allSubmissions: Submission[] = allSubmissionsArrays.flat();
 
-    setDepartmentName(dept.name || "Department");
-    setDepartmentStats({
-      totalStaff,
-      activeStaff: totalStaff,
-      pendingSubmissions,
-      completedSubmissions,
-      totalCards,
-      activeCards: totalCards,
-      overdueCount,
-      performance
-    });
+      const completedSubmissions = allSubmissions.length;
+      
+      // FIX: Define totalExpectedSubmissions before using it
+      const totalExpectedSubmissions = totalStaff * totalCards;
+      const pendingSubmissions = Math.max(0, totalExpectedSubmissions - completedSubmissions);
+      
+      const performance = totalExpectedSubmissions > 0 
+        ? Math.round((completedSubmissions / totalExpectedSubmissions) * 100)
+        : 0;
 
-    // Transform submissions into recent activity
-    const recentActivity = allSubmissions
-      .slice(0, 4)
-      .map(sub => ({
-        id: sub.id,
-        type: "submission",
-        title: `Submission for ${sub.card?.title || 'Card'}`,
-        user: `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.trim() || 'Unknown User',
-        time: getTimeAgo(new Date(sub.createdAt)),
-        status: "completed"
-      }));
+      const overdueCount = cards.filter((card: Card) => 
+        card.expiresAt && new Date(card.expiresAt) < now
+      ).length;
 
-    setRecentActivity(recentActivity);
-
-    // Transform cards into upcoming deadlines with proper staff count
-    const upcomingDeadlines = cards
-      .filter(card => card.expiresAt && new Date(card.expiresAt) > now)
-      .slice(0, 3)
-      .map(card => {
-        return {
-          id: card.id,
-          title: card.title,
-          deadline: new Date(card.expiresAt).toLocaleDateString(),
-          assignedTo: `${totalStaff} staff members`, // Use the actual department staff count
-          priority: getCardPriority(card.expiresAt)
-        };
+      setDepartmentName(dept.name || "Department");
+      setDepartmentStats({
+        totalStaff,
+        activeStaff: totalStaff,
+        pendingSubmissions,
+        completedSubmissions,
+        totalCards,
+        activeCards: totalCards,
+        overdueCount,
+        performance
       });
 
-    setUpcomingDeadlines(upcomingDeadlines);
-    setError(null);
-  } catch (err) {
-    console.error('Error fetching department data:', err);
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      // Transform submissions into recent activity
+      const recentActivityData: Activity[] = allSubmissions
+        .slice(0, 4)
+        .map((sub: Submission) => ({
+          id: sub.id,
+          type: "submission",
+          title: `Submission for ${sub.card?.title || 'Card'}`,
+          user: `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.trim() || 'Unknown User',
+          time: getTimeAgo(new Date(sub.createdAt)),
+          status: "completed"
+        }));
 
-// Helper functions
-const getTimeAgo = (date: Date): string => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+      setRecentActivity(recentActivityData);
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} min ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-};
+      // Transform cards into upcoming deadlines with proper staff count
+      const upcomingDeadlinesData: Deadline[] = cards
+        .filter((card: Card) => card.expiresAt && new Date(card.expiresAt) > now)
+        .slice(0, 3)
+        .map((card: Card) => {
+          return {
+            id: card.id,
+            title: card.title,
+            deadline: new Date(card.expiresAt!).toLocaleDateString(),
+            assignedTo: `${totalStaff} staff members`, // Use the actual department staff count
+            priority: getCardPriority(card.expiresAt!)
+          };
+        });
 
-const getCardPriority = (expiresAt: string): string => {
-  const now = new Date();
-  const dueDate = new Date(expiresAt);
-  const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  
-  if (daysUntilDue <= 1) return 'high';
-  if (daysUntilDue <= 3) return 'medium';
-  return 'low';
-};
+      setUpcomingDeadlines(upcomingDeadlinesData);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching department data:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper functions
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
+  const getCardPriority = (expiresAt: string): string => {
+    const now = new Date();
+    const dueDate = new Date(expiresAt);
+    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilDue <= 1) return 'high';
+    if (daysUntilDue <= 3) return 'medium';
+    return 'low';
+  };
 
   // Initial fetch
   useEffect(() => {
@@ -174,12 +226,12 @@ const getCardPriority = (expiresAt: string): string => {
       // Refresh stats and activity - REMOVED /api/ prefix
       fetch(`http://localhost:3000/head/stats?departmentId=${user.departmentId}`)
         .then(res => res.json())
-        .then(data => setDepartmentStats(data))
+        .then((data: DepartmentStats) => setDepartmentStats(data))
         .catch(console.error);
 
       fetch(`http://localhost:3000/head/activity?departmentId=${user.departmentId}&limit=4`)
         .then(res => res.json())
-        .then(data => setRecentActivity(data))
+        .then((data: Activity[]) => setRecentActivity(data))
         .catch(console.error);
     }, 30000); // 30 seconds
 
@@ -607,7 +659,7 @@ const getCardPriority = (expiresAt: string): string => {
               </div>
 
               {/* Additional Content to Make it Scrollable */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+              {/* <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">
                   Department Overview
                 </h2>
@@ -641,7 +693,7 @@ const getCardPriority = (expiresAt: string): string => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* Even More Content */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">

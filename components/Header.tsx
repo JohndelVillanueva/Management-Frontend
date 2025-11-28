@@ -1,12 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaTachometerAlt,
   FaCog,
-  FaUserShield,
   FaUserCircle,
   FaUserEdit,
-  FaBars,
 } from "react-icons/fa";
 import InfoSideBar from "./InfoSideBar";
 import { useAuth } from "../context/AuthContext";
@@ -16,6 +13,13 @@ type MenuItem = {
   label: string;
   path: string;
   className?: string;
+  onClick?: () => void;
+};
+
+type NavIcon = {
+  icon: React.ReactNode;
+  label: string;
+  path: string;
   onClick?: () => void;
 };
 
@@ -118,8 +122,8 @@ const Header: React.FC = () => {
     [navigate]
   );
 
-  // Removed home, info, and message icons - now empty array
-  const navIcons = useMemo(() => [], []);
+  // Removed home, info, and message icons - now empty but properly typed array
+  const navIcons = useMemo<NavIcon[]>(() => [], []);
 
   const toggleProfileDropdown = useCallback(() => {
     setIsProfileDropdownOpen((prev) => {
