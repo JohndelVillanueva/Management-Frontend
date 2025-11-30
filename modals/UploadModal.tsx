@@ -39,6 +39,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState("Document");
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -72,7 +73,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
       }
 
       const response = await fetch(
-        `http://localhost:3000/submission/${cardId}`,
+        `${baseUrl}/submission/${cardId}`,
         {
           method: "POST",
           headers: {

@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function SignupPage() {
-  const baseUrl = import.meta.env.VITE_API_URL;
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
   const [formData, setFormData] = useState({
     username: "",
     email: "",

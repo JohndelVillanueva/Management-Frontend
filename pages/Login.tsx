@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const baseUrl = import.meta.env.VITE_API_URL;
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   const redirectByUserType = (userType: string) => {
     switch (userType) {

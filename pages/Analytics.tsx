@@ -16,11 +16,12 @@ interface Activity {
 const Analytics: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    fetch("http://localhost:3000/activities", {
+    fetch(`${baseUrl}/activities`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

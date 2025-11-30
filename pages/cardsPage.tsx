@@ -9,6 +9,7 @@ const CardsPage = () => {
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
     useEffect(() => {
     const fetchUserCards = async () => {
@@ -29,7 +30,7 @@ const CardsPage = () => {
           params.append('departmentId', user.departmentId.toString());
         }
 
-        const response = await fetch(`http://localhost:3000/cards?${params.toString()}`);
+        const response = await fetch(`${baseUrl}/cards?${params.toString()}`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch user cards');

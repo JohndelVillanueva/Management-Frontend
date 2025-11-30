@@ -73,6 +73,7 @@ const HeadWelcomePage = () => {
   const [departmentName, setDepartmentName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
   
   const [departmentStats, setDepartmentStats] = useState<DepartmentStats>({
     totalStaff: 0,
@@ -100,8 +101,8 @@ const HeadWelcomePage = () => {
       setLoading(true);
       
       const [deptRes, cardsRes] = await Promise.all([
-        fetch(`http://localhost:3000/departments/${user.departmentId}`),
-        fetch(`http://localhost:3000/cards?departmentId=${user.departmentId}`)
+        fetch(`${baseUrl}/departments/${user.departmentId}`),
+        fetch(`${baseUrl}/cards?departmentId=${user.departmentId}`)
       ]);
 
       if (!deptRes.ok || !cardsRes.ok) {
@@ -119,7 +120,7 @@ const HeadWelcomePage = () => {
 
       // Get submissions for each card to calculate completion stats
       const submissionsPromises = cards.map((card: Card) => 
-        fetch(`http://localhost:3000/submissions/${card.id}`).then(res => res.json())
+        fetch(`${baseUrl}/submissions/${card.id}`).then(res => res.json())
       );
       
       const allSubmissionsArrays = await Promise.all(submissionsPromises);
@@ -224,12 +225,12 @@ const HeadWelcomePage = () => {
 
     const interval = setInterval(() => {
       // Refresh stats and activity - REMOVED /api/ prefix
-      fetch(`http://localhost:3000/head/stats?departmentId=${user.departmentId}`)
+      fetch(`${baseUrl}/head/stats?departmentId=${user.departmentId}`)
         .then(res => res.json())
         .then((data: DepartmentStats) => setDepartmentStats(data))
         .catch(console.error);
 
-      fetch(`http://localhost:3000/head/activity?departmentId=${user.departmentId}&limit=4`)
+      fetch(`${baseUrl}/head/activity?departmentId=${user.departmentId}&limit=4`)
         .then(res => res.json())
         .then((data: Activity[]) => setRecentActivity(data))
         .catch(console.error);

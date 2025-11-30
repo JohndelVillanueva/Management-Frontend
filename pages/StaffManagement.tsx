@@ -42,6 +42,7 @@ const StaffManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { user } = useAuth();
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
   
   // Check if user is HEAD (handle both old and new enum values)
   // const isHeadUser = user?.user_type === 'HEAD' || user?.user_type === 'DepartmentHead';
@@ -50,7 +51,7 @@ const StaffManagement: React.FC = () => {
     const fetchStaff = async () => {
       try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-        const res = await fetch("http://localhost:3000/users", {
+        const res = await fetch(`${baseUrl}/users`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -75,7 +76,7 @@ const StaffManagement: React.FC = () => {
     fetchStaff();
   }, []);
 
-  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
+  
 
   const getAvatarSrc = (avatar?: string | null) => {
     const DEFAULT = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptMCAyYzQuNDE4IDAgOCAzLjU4MiA4IDhzLTMuNTgyIDgtOCA4LTgtMy41ODItOC04IDMuNTgyLTggOC04eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==";

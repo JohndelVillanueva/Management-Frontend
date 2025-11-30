@@ -173,6 +173,8 @@ const UsersPage: React.FC = () => {
   // Animation states
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
   const [updatedUsers, setUpdatedUsers] = useState<Set<number>>(new Set());
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
+
 
   const showToast = (message: string, type: 'error' | 'success' = 'error') => {
     setToast({ message, type });
@@ -186,7 +188,7 @@ const UsersPage: React.FC = () => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-        const res = await fetch("http://localhost:3000/users", {
+        const res = await fetch(`${baseUrl}/users`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) throw new Error("Failed to fetch users");
@@ -205,7 +207,6 @@ const UsersPage: React.FC = () => {
     fetchUsers();
   }, []);
 
-  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
   const getAvatarSrc = (avatar?: string | null) => {
     const DEFAULT = "data:image/svg+xml;base64,PHN2Zy...";
     if (!avatar) return DEFAULT;
@@ -236,7 +237,7 @@ const UsersPage: React.FC = () => {
       
       console.log("🟡 Updating user:", updatedUser);
 
-      const response = await fetch(`http://localhost:3000/users/${updatedUser.id}`, {
+      const response = await fetch(`${baseUrl}/users/${updatedUser.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

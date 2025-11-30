@@ -41,6 +41,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const [loadingDepts, setLoadingDepts] = useState(true);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   // Load departments
   useEffect(() => {
@@ -51,7 +52,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           throw new Error("No authentication token found");
         }
 
-        const res = await fetch("http://localhost:3000/departments", {
+        const res = await fetch(`${baseUrl}/departments`, {
           headers: { 
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"

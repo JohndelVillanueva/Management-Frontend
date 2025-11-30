@@ -84,11 +84,12 @@ const CardSubmissionAnalytics = () => {
   const [departmentStorage, setDepartmentStorage] = useState<DepartmentStorage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   const fetchWithErrorHandling = async (url: string, endpointName: string, fallbackData: any = []) => {
     try {
       console.log(`🌐 Fetching ${endpointName}:`, url);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token');  
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -142,19 +143,19 @@ const CardSubmissionAnalytics = () => {
         activity,
         storage
       ] = await Promise.all([
-        fetchWithErrorHandling('http://localhost:3000/cards/analytics', 'Card Analytics', {
+        fetchWithErrorHandling(`${baseUrl}/cards/analytics`, `Card Analytics`, {
           totalCards: 0,
           cardsByDepartment: {},
           totalSubmissions: 0,
           totalFiles: 0,
           recentCards: []
         }),
-        fetchWithErrorHandling('http://localhost:3000/activities/stats/realtime', 'Realtime Stats', {
+        fetchWithErrorHandling(`${baseUrl}/activities/stats/realtime`, `Realtime Stats`, {
           activeTeachers: 0
         }),
-        fetchWithErrorHandling('http://localhost:3000/departments/completion-rates', 'Department Completion Rates', []),
-        fetchWithErrorHandling('http://localhost:3000/activities/recent?limit=8', 'Recent Activity', []),
-        fetchWithErrorHandling('http://localhost:3000/departments/storage', 'Department Storage', [])
+        fetchWithErrorHandling(`${baseUrl}/departments/completion-rates`, 'Department Completion Rates', []),
+        fetchWithErrorHandling(`${baseUrl}/activities/recent?limit=8`, 'Recent Activity', []),
+        fetchWithErrorHandling(`${baseUrl}/departments/storage`, 'Department Storage', [])
       ]);
 
       setSubmissionStats({
@@ -203,27 +204,27 @@ const CardSubmissionAnalytics = () => {
         'Content-Type': 'application/json'
       };
 
-      fetch("http://localhost:3000/activities/stats/realtime", { headers })
+      fetch(`${baseUrl}/activities/stats/realtime`, { headers })
         .then((res) => res.json())
         .then((data) => setRealtimeMetrics(data))
         .catch(console.error);
 
-      fetch("http://localhost:3000/activities/recent?limit=8", { headers })
+      fetch(`${baseUrl}/activities/recent?limit=8`, { headers })
         .then((res) => res.json())
         .then((data) => setRecentActivity(data))
         .catch(console.error);
 
-      fetch("http://localhost:3000/departments/storage", { headers })
+      fetch(`${baseUrl}/departments/storage`, { headers })
         .then((res) => res.json())
         .then((data) => setDepartmentStorage(data))
         .catch(console.error);
 
-      fetch("http://localhost:3000/departments/completion-rates", { headers })
+      fetch(`${baseUrl}/departments/completion-rates`, { headers })
         .then((res) => res.json())
         .then((data) => setDepartmentStats(data))
         .catch(console.error);
 
-      fetch("http://localhost:3000/cards/analytics", { headers })
+      fetch(`${baseUrl}/cards/analytics`, { headers })
         .then((res) => res.json())
         .then((data) => {
           setSubmissionStats({

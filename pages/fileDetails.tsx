@@ -6,12 +6,13 @@ const FileDetails = () => {
   const [file, setFile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   useEffect(() => {
     const fetchFile = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3000/file/${fileId}`);
+        const res = await fetch(`${baseUrl}/file/${fileId}`);
         if (!res.ok) throw new Error("Failed to fetch file");
         const data = await res.json();
         setFile(data);

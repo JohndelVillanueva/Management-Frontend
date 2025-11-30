@@ -72,6 +72,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
     files: false,
     settings: true
   });
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   // Check if all required sections are completed
   const isFormComplete = completedSections.basic && completedSections.departments && completedSections.files;
@@ -135,7 +136,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
       
       // For HEAD users, only fetch their own department
       if (user_type === 'HEAD' && user_department) {
-        fetch(`http://localhost:3000/departments/${user_department}`, { headers })
+        fetch(`${baseUrl}/departments/${user_department}`, { headers })
           .then(res => {
             if (!res.ok) {
               if (res.status === 401) {
@@ -163,7 +164,7 @@ const CreateCardModal: React.FC<CreateCardModalProps> = ({
           });
       } else if (user_type === 'ADMIN') {
         // For ADMIN users, fetch all departments
-        fetch('http://localhost:3000/departments', { headers })
+        fetch(`${baseUrl}/departments`, { headers })
           .then(res => {
             if (!res.ok) {
               throw new Error(`HTTP ${res.status}: ${res.statusText}`);

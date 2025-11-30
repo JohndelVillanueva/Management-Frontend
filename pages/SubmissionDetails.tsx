@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Modal from 'react-modal';
 import { useParams, useNavigate} from "react-router-dom";
 
+
 const SubmissionDetails = () => {
   const { submissionId } = useParams();
   const [submission, setSubmission] = useState<any>(null);
@@ -15,19 +16,20 @@ const SubmissionDetails = () => {
   const [modalDescription, setModalDescription] = useState("");
   const [modalType, setModalType] = useState("Document");
   const navigate = useNavigate();
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         // Fetch submission details
-        const submissionRes = await fetch(`http://localhost:3000/submission/details/${submissionId}`);
+        const submissionRes = await fetch(`${baseUrl}/submission/details/${submissionId}`);
         if (!submissionRes.ok) throw new Error("Failed to fetch submission");
         const submissionData = await submissionRes.json();
         setSubmission(submissionData);
 
         // Fetch files for this card (by cardId)
-        const filesRes = await fetch(`http://localhost:3000/submission/${submissionData.card.id}/files`);
+        const filesRes = await fetch(`${baseUrl}/submission/${submissionData.card.id}/files`);
         if (filesRes.ok) {
           const filesData = await filesRes.json();
           setFiles(filesData);
@@ -76,7 +78,7 @@ const SubmissionDetails = () => {
       // Do not tie to specific submission; show files by cardId
 
       const response = await fetch(
-        `http://localhost:3000/submission/${submission.card.id}`,
+        `${baseUrl}/submission/${submission.card.id}`,
         {
           method: "POST",
           headers: {
@@ -93,7 +95,7 @@ const SubmissionDetails = () => {
       }
 
       // Refresh files data for this card
-      const filesRes = await fetch(`http://localhost:3000/submission/${submission.card.id}/files`);
+      const filesRes = await fetch(`${baseUrl}/submission/${submission.card.id}/files`);
       if (filesRes.ok) {
         const filesData = await filesRes.json();
         setFiles(filesData);

@@ -23,12 +23,32 @@ type NavIcon = {
   onClick?: () => void;
 };
 
+type UserProfile = {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone_number: string | null;
+  user_type: string;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  avatar: string | null;
+  department: {
+    id: number;
+    name: string;
+  } | null;
+};
+
 const DEFAULT_PROFILE_IMAGE =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptMCAyYzQuNDE4IDAgOCAzLjU4MiA4IDhzLTMuNTgyIDgtOCA4LTgtMy41ODItOC04IDMuNTgyLTggOC04eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==";
 
 const Header: React.FC = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isInfoSidebarOpen, setIsInfoSidebarOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const infoSidebarRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -41,6 +61,55 @@ const Header: React.FC = () => {
     HEAD: "/HeadDashboard",
     STAFF: "/StaffDashboard",
   };
+
+  // Fetch user profile data
+  const fetchUserProfile = useCallback(async () => {
+    if (!user?.id) return;
+
+    setIsLoadingProfile(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/api/users/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const data = await response.json();
+      setUserProfile(data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      // Fallback to user context data if API fails
+      setUserProfile({
+        id: user.id,
+        username: user.username || "",
+        email: user.email || "",
+        first_name: user.first_name || null,
+        last_name: user.last_name || null,
+        phone_number: null,
+        user_type: user.user_type || "",
+        is_active: true,
+        is_verified: true,
+        created_at: new Date().toISOString(),
+        avatar: user.avatar || null,
+        department: null,
+      });
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }, [user, baseUrl]);
+
+  // Fetch profile when dropdown opens
+  useEffect(() => {
+    if (isProfileDropdownOpen && !userProfile) {
+      fetchUserProfile();
+    }
+  }, [isProfileDropdownOpen, userProfile, fetchUserProfile]);
 
   // Fixed useEffect - only redirect to login if no user
   useEffect(() => {
@@ -122,7 +191,6 @@ const Header: React.FC = () => {
     [navigate]
   );
 
-  // Removed home, info, and message icons - now empty but properly typed array
   const navIcons = useMemo<NavIcon[]>(() => [], []);
 
   const toggleProfileDropdown = useCallback(() => {
@@ -135,14 +203,22 @@ const Header: React.FC = () => {
   }, []);
 
   const profileImageSrc = useMemo(() => {
-    const avatar = user?.avatar as string | undefined;
+    // Use userProfile data if available, otherwise fall back to user context
+    const avatar = userProfile?.avatar || (user?.avatar as string | undefined);
     if (!avatar) return DEFAULT_PROFILE_IMAGE;
     if (avatar.startsWith("http://") || avatar.startsWith("https://")) return avatar;
     if (avatar.startsWith("data:image/")) return avatar;
-    // Relative path from API (e.g., /uploads/avatars/..)
+    // Relative path from API
     const trimmedBase = (baseUrl || "").replace(/\/$/, "");
     return `${trimmedBase}${avatar.startsWith("/") ? "" : "/"}${avatar}`;
-  }, [user?.avatar, baseUrl]);
+  }, [userProfile?.avatar, user?.avatar, baseUrl]);
+
+  const displayName = useMemo(() => {
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name} ${userProfile.last_name}`;
+    }
+    return userProfile?.username || user?.username || "User";
+  }, [userProfile, user]);
 
   const renderDropdownItem = useCallback(
     (item: MenuItem) => (
@@ -182,7 +258,6 @@ const Header: React.FC = () => {
         </div>
 
         <nav className="flex items-center space-x-4">
-          {/* Navigation icons section is now empty */}
           {navIcons.map((navItem) => (
             <button
               key={navItem.path}
@@ -213,9 +288,49 @@ const Header: React.FC = () => {
 
             {isProfileDropdownOpen && (
               <div
-                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+                className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-50 border border-gray-200"
                 role="menu"
               >
+                {/* Profile Info Section */}
+                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                  {isLoadingProfile ? (
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={profileImageSrc}
+                          alt={displayName}
+                          className="h-12 w-12 rounded-full border-2 border-orange-500 object-cover"
+                          onError={handleImageError}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {displayName}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {userProfile?.email || user?.email}
+                          </p>
+                          {userProfile?.department && (
+                            <p className="text-xs text-gray-500 truncate">
+                              {userProfile.department.name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                          {userProfile?.user_type || user?.user_type}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Menu Items */}
                 <div className="py-1">
                   {profileMenuItems.map((item, index) => (
                     <div key={index} role="none">

@@ -32,6 +32,7 @@ const Departments = () => {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   useEffect(() => {
     fetchDepartments();
@@ -40,7 +41,7 @@ const Departments = () => {
   const fetchDepartments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3000/departments', {
+      const response = await fetch(`${baseUrl}/departments`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
         }
@@ -75,7 +76,7 @@ const Departments = () => {
       return;
     }
 
-    const deletePromise = fetch(`http://localhost:3000/departments/${id}`, {
+    const deletePromise = fetch(`${baseUrl}/departments/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
@@ -104,8 +105,8 @@ const Departments = () => {
     setSubmitting(true);
     
     const url = editingDepartment 
-      ? `http://localhost:3000/departments/${editingDepartment.id}`
-      : 'http://localhost:3000/departments';
+      ? `${baseUrl}/${editingDepartment.id}`
+      : `${baseUrl}/departments`;
     
     const method = editingDepartment ? 'PUT' : 'POST';
 

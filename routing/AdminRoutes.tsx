@@ -17,6 +17,8 @@ import Departments from "../pages/Departments";
 import UsersPage from "../pages/usersPage";
 import Analytics from "../pages/Analytics.js";
 import StaffManagement from "../pages/StaffManagement";
+import Profile from "../pages/Profile.js";
+import EditProfile from "../pages/EditProfile.js";
 
 export default function routes() {
   return (
@@ -79,6 +81,8 @@ export default function routes() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/edit" element={<EditProfile />} />
             <Route
               path="/CardDetails/:id"
               element={

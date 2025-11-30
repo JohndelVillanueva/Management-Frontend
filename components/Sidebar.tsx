@@ -25,11 +25,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [cards, setCards] = useState<any[]>([]);
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   useEffect(() => {
     // Only fetch cards for ADMIN or HEAD
     if (user?.user_type === 'ADMIN' || user?.user_type === 'HEAD') {
-      fetch('http://localhost:3000/cards')
+      fetch(`${baseUrl}/cards`)
         .then(res => {
           if (!res.ok) {
             throw new Error('Failed to fetch cards');

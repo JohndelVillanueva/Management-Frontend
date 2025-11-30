@@ -13,11 +13,12 @@ export const useCards = () => {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3000/cards");
+      const res = await fetch(`${baseUrl}/cards`);
       if (!res.ok) throw new Error("Failed to fetch cards");
       setCards(await res.json());
     } catch (err) {
@@ -31,7 +32,7 @@ export const useCards = () => {
     setCreating(true);
     setCreateError("");
     try {
-      const res = await fetch("http://localhost:3000/cards", {
+      const res = await fetch(`${baseUrl}/cards`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

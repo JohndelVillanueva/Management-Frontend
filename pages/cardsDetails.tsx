@@ -32,6 +32,7 @@ const CardDetails = () => {
   const [sortBy, setSortBy] = useState<"recent" | "name" | "size" | "owner">("recent");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [showFilters, setShowFilters] = useState(false);
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,7 +40,7 @@ const CardDetails = () => {
 
       setLoading(true);
       try {
-        const cardRes = await fetch(`http://localhost:3000/cards/${id}`);
+        const cardRes = await fetch(`${baseUrl}/cards/${id}`);
         if (cardRes.ok) {
           const cardData = await cardRes.json();
           console.log('Card data received:', cardData);
@@ -103,7 +104,7 @@ const CardDetails = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`http://localhost:3000/submissions/${id}`, {
+      const response = await fetch(`${baseUrl}/submissions/${id}`, {
         method: "POST",
         headers,
         body: formData
@@ -126,7 +127,7 @@ const CardDetails = () => {
       toast.success('File uploaded successfully!');
 
       // Refresh the card data to get updated files
-      const cardRes = await fetch(`http://localhost:3000/cards/${id}`);
+      const cardRes = await fetch(`${baseUrl}/cards/${id}`);
       if (cardRes.ok) {
         const cardData = await cardRes.json();
 
@@ -256,7 +257,7 @@ const CardDetails = () => {
         return;
       }
 
-      const fileUrl = `http://localhost:3000${file.path}`;
+      const fileUrl = `${baseUrl}${file.path}`;
 
       if (action === 'view') {
         window.open(fileUrl, '_blank');

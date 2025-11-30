@@ -33,12 +33,13 @@ const CardsPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
+  const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
   const fetchCards = async () => {
     setLoading(true);
     setError('');
     try {
-      let url = 'http://localhost:3000/cards';
+      let url = `${baseUrl}/cards`;
       const params = new URLSearchParams();
 
       if (user?.user_type === 'HEAD' || user?.user_type === 'STAFF') {
@@ -145,7 +146,7 @@ const handleCreateCard = async (
       allowedFileTypes
     });
 
-    const response = await fetch('http://localhost:3000/cards', {
+    const response = await fetch(`${baseUrl}/cards`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
