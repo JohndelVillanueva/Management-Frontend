@@ -186,7 +186,7 @@ const EditProfile: React.FC = () => {
         const formDataAvatar = new FormData();
         formDataAvatar.append("avatar", avatarFile);
 
-        const avatarResponse = await fetch(`${baseUrl}/api/users/${user?.id}/avatar`, {
+        const avatarResponse = await fetch(`${baseUrl}/users/${user?.id}/avatar`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
