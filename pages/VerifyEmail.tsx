@@ -44,7 +44,7 @@ const VerifyEmail: React.FC = () => {
         return;
       }
       
-      hasVerifiedRef.current = true; // Set ref immediately to prevent race conditions
+      hasVerifiedRef.current = true;
       
       try {
         console.log('[VerifyEmail] Starting verification...');
