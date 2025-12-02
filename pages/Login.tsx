@@ -62,65 +62,81 @@ export default function LoginPage() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError("");
 
-    try {
-      const response = await fetch(`${baseUrl}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          rememberMe: formData.rememberMe,
-        }),
-        credentials: "include",
-      });
+  try {
+    const response = await fetch(`${baseUrl}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      }),
+      credentials: "include",
+    });
 
-      const data = await response.json();
-      console.log("Login response:", data);
+    const data = await response.json();
+    console.log("Login response:", data); // Check if first_name and last_name are here
 
-      if (!response.ok) {
-        if (data.code === "USER_NOT_VERIFIED") {
-          throw new Error(
-            "Account not verified. A new verification email has been sent to your email address."
-          );
-        }
-        throw new Error(data.message || "Login failed");
+    if (!response.ok) {
+      if (data.code === "USER_NOT_VERIFIED") {
+        throw new Error(
+          "Account not verified. A new verification email has been sent to your email address."
+        );
       }
-
-      if (data.token && data.user) {
-        // Clear both storages first to prevent conflicts
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        sessionStorage.removeItem("token");
-        sessionStorage.removeItem("user");
-
-        // Store in correct storage
-        const storage = formData.rememberMe ? localStorage : sessionStorage;
-        storage.setItem("token", data.token);
-        storage.setItem("user", JSON.stringify(data.user));
-
-        // Call auth context login
-        login(data.token, data.user, formData.rememberMe);
-
-        // Redirect user based on user_type
-        redirectByUserType(data.user.user_type);
-      } else {
-        throw new Error("Invalid response format - missing token or user data");
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred"
-      );
-    } finally {
-      setIsLoading(false);
+      throw new Error(data.message || "Login failed");
     }
-  };
+
+    if (data.token && data.user) {
+      // Clear both storages first to prevent conflicts
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+
+      // Prepare user data for storage - MAKE SURE TO INCLUDE FIRST_NAME AND LAST_NAME
+      const userDataToStore = {
+        id: data.user.id,
+        email: data.user.email,
+        username: data.user.username,
+        user_type: data.user.user_type,
+        first_name: data.user.first_name || data.user.firstName, // Include first_name
+        last_name: data.user.last_name || data.user.lastName,   // Include last_name
+        name: data.user.name,
+        avatar: data.user.avatar,
+        departmentId: data.user.departmentId,
+        is_verified: data.user.is_verified,
+      };
+
+      console.log("Storing user data:", userDataToStore); // Debug log
+
+      // Store in correct storage
+      const storage = formData.rememberMe ? localStorage : sessionStorage;
+      storage.setItem("token", data.token);
+      storage.setItem("user", JSON.stringify(userDataToStore));
+
+      // Call auth context login - pass the complete user data
+      login(data.token, userDataToStore, formData.rememberMe);
+
+      // Redirect user based on user_type
+      redirectByUserType(data.user.user_type);
+    } else {
+      throw new Error("Invalid response format - missing token or user data");
+    }
+  } catch (err) {
+    setError(
+      err instanceof Error ? err.message : "An unexpected error occurred"
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 relative">

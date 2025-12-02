@@ -19,7 +19,7 @@ import Analytics from "../pages/Analytics.js";
 import StaffManagement from "../pages/StaffManagement";
 import Profile from "../pages/Profile.js";
 import EditProfile from "../pages/EditProfile.js";
-
+import MySubmissions from "../components/staff/MySubmissions.js";
 export default function routes() {
   return (
     <Router>
@@ -83,6 +83,7 @@ export default function routes() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/edit" element={<EditProfile />} />
+            <Route path="/my-submissions"element={<MySubmissions />} />
             <Route
               path="/CardDetails/:id"
               element={

@@ -213,12 +213,43 @@ const Header: React.FC = () => {
     return `${trimmedBase}${avatar.startsWith("/") ? "" : "/"}${avatar}`;
   }, [userProfile?.avatar, user?.avatar, baseUrl]);
 
-  const displayName = useMemo(() => {
-    if (userProfile?.first_name && userProfile?.last_name) {
-      return `${userProfile.first_name} ${userProfile.last_name}`;
+const displayName = useMemo(() => {
+  // Check localStorage first for immediate access
+  const storedUser = localStorage.getItem('user');
+  if (storedUser) {
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      // Check for both first_name and last_name
+      if (parsedUser.first_name && parsedUser.last_name) {
+        return `${parsedUser.first_name} ${parsedUser.last_name}`;
+      }
+      // Check for just first_name
+      if (parsedUser.first_name) {
+        return parsedUser.first_name;
+      }
+      // Check for just last_name
+      if (parsedUser.last_name) {
+        return parsedUser.last_name;
+      }
+      // Fallback to name field if exists
+      if (parsedUser.name) {
+        return parsedUser.name;
+      }
+    } catch (error) {
+      console.error('Error parsing stored user:', error);
     }
-    return userProfile?.username || user?.username || "User";
-  }, [userProfile, user]);
+  }
+  
+  // Fallback to other sources
+  const profileName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ');
+  if (profileName) return profileName;
+  
+  const authName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+  if (authName) return authName;
+  
+  // Final fallback
+  return userProfile?.username || user?.username || "User";
+}, [userProfile, user]);
 
   const renderDropdownItem = useCallback(
     (item: MenuItem) => (
