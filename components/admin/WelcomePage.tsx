@@ -412,7 +412,7 @@ const CardSubmissionAnalytics = () => {
         </div>
 
         {/* Real-time Metrics - Only Active Teachers */}
-        <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
+        {/* <div className="mb-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold text-gray-800">
               Live Submission Activity
@@ -430,7 +430,7 @@ const CardSubmissionAnalytics = () => {
               color="#f59e0b"
             />
           </div>
-        </div>
+        </div> */}
 
         {/* Department Storage Data */}
         <div className="mb-8 bg-white rounded-lg shadow-md p-6">
@@ -721,128 +721,141 @@ const CardSubmissionAnalytics = () => {
         </div>
 
         {/* Status Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Overall Status Breakdown */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6">
-              Overall Status Breakdown
-            </h3>
-            <div className="space-y-6">
-              {/* Completed */}
-              <div>
-                <div className="flex justify-between text-base mb-2">
-                  <span className="text-gray-600">Completed</span>
-                  <span className="font-semibold text-green-600">
-                    {submissionStats.submitted}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className="bg-green-500 h-4 rounded-full transition-all"
-                    style={{
-                      width: `${submissionStats.totalCards > 0
-                          ? Math.min((submissionStats.submitted / submissionStats.totalCards) * 100, 100)
-                          : 0
-                        }%`,
-                    }}
-                  />
-                </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  {submissionStats.submitted} / {submissionStats.totalCards} cards
-                </p>
-              </div>
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+  {/* Overall Status Breakdown */}
+  <div className="bg-white rounded-lg shadow-md p-6">
+    <h3 className="text-xl font-semibold text-gray-800 mb-6">
+      Overall Status Breakdown
+    </h3>
+    <div className="space-y-6">
+      {/* Completed */}
+      <div>
+        <div className="flex justify-between text-base mb-2">
+          <span className="text-gray-600">Completed</span>
+          <span className="font-semibold text-green-600">
+            {submissionStats.submitted}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4">
+          <div
+            className="bg-green-500 h-4 rounded-full transition-all"
+            style={{
+              width: `${submissionStats.totalCards > 0
+                  ? Math.min((submissionStats.submitted / submissionStats.totalCards) * 100, 100)
+                  : 0
+                }%`,
+            }}
+          />
+        </div>
+        <p className="text-sm text-gray-500 mt-1">
+          {submissionStats.submitted} / {submissionStats.totalCards} cards
+        </p>
+      </div>
 
-              {/* In Progress */}
-              <div>
-                <div className="flex justify-between text-base mb-2">
-                  <span className="text-gray-600">In Progress</span>
-                  <span className="font-semibold text-orange-600">
-                    {submissionStats.pending}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className="bg-orange-500 h-4 rounded-full transition-all"
-                    style={{
-                      width: `${submissionStats.totalCards > 0
-                          ? Math.min((submissionStats.pending / submissionStats.totalCards) * 100, 100)
-                          : 0
-                        }%`,
-                    }}
-                  />
-                </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  {submissionStats.pending} / {submissionStats.totalCards} cards
-                </p>
-              </div>
+      {/* In Progress */}
+      <div>
+        <div className="flex justify-between text-base mb-2">
+          <span className="text-gray-600">In Progress</span>
+          <span className="font-semibold text-orange-600">
+            {submissionStats.pending}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4">
+          <div
+            className="bg-orange-500 h-4 rounded-full transition-all"
+            style={{
+              width: `${submissionStats.totalCards > 0
+                  ? Math.min((submissionStats.pending / submissionStats.totalCards) * 100, 100)
+                  : 0
+                }%`,
+            }}
+          />
+        </div>
+        <p className="text-sm text-gray-500 mt-1">
+          {submissionStats.pending} / {submissionStats.totalCards} cards
+        </p>
+      </div>
 
-              {/* Overdue */}
-              <div>
-                <div className="flex justify-between text-base mb-2">
-                  <span className="text-gray-600">Overdue</span>
-                  <span className="font-semibold text-red-600">
-                    {submissionStats.overdue}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className="bg-red-500 h-4 rounded-full transition-all"
-                    style={{
-                      width: `${submissionStats.totalCards > 0
-                          ? Math.min((submissionStats.overdue / submissionStats.totalCards) * 100, 100)
-                          : 0
-                        }%`,
-                    }}
-                  />
-                </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  {submissionStats.overdue} / {submissionStats.totalCards} cards
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* Overdue */}
+      <div>
+        <div className="flex justify-between text-base mb-2">
+          <span className="text-gray-600">Overdue</span>
+          <span className="font-semibold text-red-600">
+            {submissionStats.overdue}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4">
+          <div
+            className="bg-red-500 h-4 rounded-full transition-all"
+            style={{
+              width: `${submissionStats.totalCards > 0
+                  ? Math.min((submissionStats.overdue / submissionStats.totalCards) * 100, 100)
+                  : 0
+                }%`,
+            }}
+          />
+        </div>
+        <p className="text-sm text-gray-500 mt-1">
+          {submissionStats.overdue} / {submissionStats.totalCards} cards
+        </p>
+      </div>
+    </div>
+  </div>
 
           {/* Department Completion Rates - FIXED VERSION */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-6">
-              Department Completion Rates
-            </h3>
-            <div className="space-y-6">
-              {departmentStats && departmentStats.length > 0 ? (
-                departmentStats.map((dept, idx) => (
-                  <div key={idx}>
-                    <div className="flex justify-between text-base mb-2">
-                      <span className="text-gray-600">
-                        {dept.department}
-                      </span>
-                      <span className="font-semibold text-orange-600">
-                        {dept.completionRate}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-orange-500 h-3 rounded-full transition-all"
-                        style={{
-                          width: `${parseInt(String(dept.completionRate)) || 0}%`
-                        }}
-                      />
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {dept.completedCards} / {dept.totalCards} cards
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-2">🏢</div>
-                  <p className="text-gray-500">No department data available</p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Department completion rates will appear here
-                  </p>
-                </div>
-              )}
-            </div>
+<div className="bg-white rounded-lg shadow-md p-6">
+  <h3 className="text-xl font-semibold text-gray-800 mb-6">
+    Department Completion Rates
+  </h3>
+  <div 
+    className="space-y-6 max-h-96 overflow-y-auto pr-2"
+    style={{ 
+      scrollbarWidth: 'thin',
+      scrollbarColor: '#f59e0b #f3f4f6'
+    }}
+  >
+    {departmentStats && departmentStats.length > 0 ? (
+      departmentStats.map((dept, idx) => (
+        <div key={idx} className="pb-4 border-b last:border-b-0 last:pb-0">
+          <div className="flex justify-between text-base mb-2">
+            <span className="text-gray-600 font-medium">
+              {dept.department}
+            </span>
+            <span className="font-semibold text-orange-600">
+              {dept.completionRate}%
+            </span>
           </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div
+              className="bg-gradient-to-r from-orange-400 to-orange-600 h-3 rounded-full transition-all duration-500"
+              style={{
+                width: `${parseInt(String(dept.completionRate)) || 0}%`
+              }}
+            />
+          </div>
+          <p className="text-sm text-gray-500 mt-1">
+            {dept.completedCards} / {dept.totalCards} cards completed
+          </p>
+          <div className="flex items-center text-xs text-gray-400 mt-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+            <span>Completed: {dept.completedCards}</span>
+            <span className="mx-2">•</span>
+            <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+            <span>Pending: {dept.totalCards - dept.completedCards}</span>
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="text-center py-8">
+        <div className="text-4xl mb-2">🏢</div>
+        <p className="text-gray-500">No department data available</p>
+        <p className="text-sm text-gray-400 mt-1">
+          Department completion rates will appear here
+        </p>
+      </div>
+    )}
+  </div>
+</div>
 
           {/* Recent Submissions - SCROLLABLE VERSION */}
           <div className="bg-white rounded-lg shadow-md p-6">
