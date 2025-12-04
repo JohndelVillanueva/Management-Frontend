@@ -37,7 +37,7 @@ const CardsPage: React.FC = () => {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(7);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   
   const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 
