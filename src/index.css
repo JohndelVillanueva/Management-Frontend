@@ -31,3 +31,31 @@ html, body {
 .chat-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #9ca3af;
 }
+
+.hover-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #f3f4f6;
+}
+
+.hover-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.hover-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.hover-scroll::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 4px;
+}
+
+.hover-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Make sure tooltip doesn't block mouse events */
+.tooltip-scroll-area {
+  pointer-events: auto;
+}
