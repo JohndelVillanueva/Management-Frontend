@@ -74,7 +74,7 @@ const HeadWelcomePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const baseUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
-  
+
   const [departmentStats, setDepartmentStats] = useState<DepartmentStats>({
     totalStaff: 0,
     activeStaff: 0,
@@ -83,7 +83,7 @@ const HeadWelcomePage = () => {
     totalCards: 0,
     activeCards: 0,
     overdueCount: 0,
-    performance: 0
+    performance: 0,
   });
 
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
@@ -92,26 +92,26 @@ const HeadWelcomePage = () => {
   // Fetch all department data
   const fetchDepartmentData = async () => {
     if (!user?.departmentId) {
-      setError('No department assigned');
+      setError("No department assigned");
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      
+
       const [deptRes, cardsRes] = await Promise.all([
         fetch(`${baseUrl}/departments/${user.departmentId}`),
-        fetch(`${baseUrl}/cards?departmentId=${user.departmentId}`)
+        fetch(`${baseUrl}/cards?departmentId=${user.departmentId}`),
       ]);
 
       if (!deptRes.ok || !cardsRes.ok) {
-        throw new Error('Failed to fetch department data');
+        throw new Error("Failed to fetch department data");
       }
 
       const [dept, cards] = await Promise.all([
         deptRes.json() as Promise<Department>,
-        cardsRes.json() as Promise<Card[]>
+        cardsRes.json() as Promise<Card[]>,
       ]);
 
       const totalStaff = dept._count?.users || 0;
@@ -119,25 +119,29 @@ const HeadWelcomePage = () => {
       const now = new Date();
 
       // Get submissions for each card to calculate completion stats
-      const submissionsPromises = cards.map((card: Card) => 
-        fetch(`${baseUrl}/submissions/${card.id}`).then(res => res.json())
+      const submissionsPromises = cards.map((card: Card) =>
+        fetch(`${baseUrl}/submissions/${card.id}`).then((res) => res.json())
       );
-      
+
       const allSubmissionsArrays = await Promise.all(submissionsPromises);
       const allSubmissions: Submission[] = allSubmissionsArrays.flat();
 
       const completedSubmissions = allSubmissions.length;
-      
+
       // FIX: Define totalExpectedSubmissions before using it
       const totalExpectedSubmissions = totalStaff * totalCards;
-      const pendingSubmissions = Math.max(0, totalExpectedSubmissions - completedSubmissions);
-      
-      const performance = totalExpectedSubmissions > 0 
-        ? Math.round((completedSubmissions / totalExpectedSubmissions) * 100)
-        : 0;
+      const pendingSubmissions = Math.max(
+        0,
+        totalExpectedSubmissions - completedSubmissions
+      );
 
-      const overdueCount = cards.filter((card: Card) => 
-        card.expiresAt && new Date(card.expiresAt) < now
+      const performance =
+        totalExpectedSubmissions > 0
+          ? Math.round((completedSubmissions / totalExpectedSubmissions) * 100)
+          : 0;
+
+      const overdueCount = cards.filter(
+        (card: Card) => card.expiresAt && new Date(card.expiresAt) < now
       ).length;
 
       setDepartmentName(dept.name || "Department");
@@ -149,7 +153,7 @@ const HeadWelcomePage = () => {
         totalCards,
         activeCards: totalCards,
         overdueCount,
-        performance
+        performance,
       });
 
       // Transform submissions into recent activity
@@ -158,17 +162,22 @@ const HeadWelcomePage = () => {
         .map((sub: Submission) => ({
           id: sub.id,
           type: "submission",
-          title: `Submission for ${sub.card?.title || 'Card'}`,
-          user: `${sub.user?.first_name || ''} ${sub.user?.last_name || ''}`.trim() || 'Unknown User',
+          title: `Submission for ${sub.card?.title || "Card"}`,
+          user:
+            `${sub.user?.first_name || ""} ${
+              sub.user?.last_name || ""
+            }`.trim() || "Unknown User",
           time: getTimeAgo(new Date(sub.createdAt)),
-          status: "completed"
+          status: "completed",
         }));
 
       setRecentActivity(recentActivityData);
 
       // Transform cards into upcoming deadlines with proper staff count
       const upcomingDeadlinesData: Deadline[] = cards
-        .filter((card: Card) => card.expiresAt && new Date(card.expiresAt) > now)
+        .filter(
+          (card: Card) => card.expiresAt && new Date(card.expiresAt) > now
+        )
         .slice(0, 3)
         .map((card: Card) => {
           return {
@@ -176,15 +185,15 @@ const HeadWelcomePage = () => {
             title: card.title,
             deadline: new Date(card.expiresAt!).toLocaleDateString(),
             assignedTo: `${totalStaff} staff members`, // Use the actual department staff count
-            priority: getCardPriority(card.expiresAt!)
+            priority: getCardPriority(card.expiresAt!),
           };
         });
 
       setUpcomingDeadlines(upcomingDeadlinesData);
       setError(null);
     } catch (err) {
-      console.error('Error fetching department data:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error("Error fetching department data:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -198,20 +207,23 @@ const HeadWelcomePage = () => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
   };
 
   const getCardPriority = (expiresAt: string): string => {
     const now = new Date();
     const dueDate = new Date(expiresAt);
-    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysUntilDue <= 1) return 'high';
-    if (daysUntilDue <= 3) return 'medium';
-    return 'low';
+    const daysUntilDue = Math.ceil(
+      (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (daysUntilDue <= 1) return "high";
+    if (daysUntilDue <= 3) return "medium";
+    return "low";
   };
 
   // Initial fetch
@@ -226,12 +238,14 @@ const HeadWelcomePage = () => {
     const interval = setInterval(() => {
       // Refresh stats and activity - REMOVED /api/ prefix
       fetch(`${baseUrl}/head/stats?departmentId=${user.departmentId}`)
-        .then(res => res.json())
+        .then((res) => res.json())
         .then((data: DepartmentStats) => setDepartmentStats(data))
         .catch(console.error);
 
-      fetch(`${baseUrl}/head/activity?departmentId=${user.departmentId}&limit=4`)
-        .then(res => res.json())
+      fetch(
+        `${baseUrl}/head/activity?departmentId=${user.departmentId}&limit=4`
+      )
+        .then((res) => res.json())
         .then((data: Activity[]) => setRecentActivity(data))
         .catch(console.error);
     }, 30000); // 30 seconds
@@ -305,7 +319,7 @@ const HeadWelcomePage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-red-600">Error: {error}</p>
-          <button 
+          <button
             onClick={fetchDepartmentData}
             className="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
           >
@@ -320,7 +334,7 @@ const HeadWelcomePage = () => {
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Mobile sidebar backdrop */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         ></div>
@@ -328,7 +342,11 @@ const HeadWelcomePage = () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Mobile sidebar */}
-        <div className={`fixed top-0 left-0 z-30 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:hidden ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div
+          className={`fixed top-0 left-0 z-30 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:hidden ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Menu</h2>
             <button onClick={() => setIsSidebarOpen(false)}>
@@ -337,25 +355,25 @@ const HeadWelcomePage = () => {
           </div>
           <div className="p-4">
             <nav className="space-y-2">
-              <button 
+              <button
                 onClick={() => navigate("/HeadDashboard")}
                 className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
               >
                 Dashboard
               </button>
-              <button 
+              <button
                 onClick={() => navigate("/staff")}
                 className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
               >
                 Staff Management
               </button>
-              <button 
+              <button
                 onClick={() => navigate("/reports")}
                 className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
               >
                 Reports
               </button>
-              <button 
+              <button
                 onClick={() => navigate("/cards")}
                 className="w-full text-left py-2 px-4 rounded-lg hover:bg-gray-100"
               >
@@ -374,7 +392,7 @@ const HeadWelcomePage = () => {
               <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-8">
                 <div className="flex-1 mb-4 lg:mb-0">
                   <div className="flex items-center mb-3">
-                    <button 
+                    <button
                       className="lg:hidden p-2 rounded-lg bg-white shadow-sm mr-3"
                       onClick={() => setIsSidebarOpen(true)}
                     >
@@ -386,7 +404,7 @@ const HeadWelcomePage = () => {
                       </h1>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-3">
                     <div className="inline-flex items-center px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
                       <BuildingOfficeIcon className="h-5 w-5 mr-2" />
@@ -397,18 +415,21 @@ const HeadWelcomePage = () => {
                       Live data updating every 30 seconds
                     </div>
                   </div>
-                  
+
                   <p className="text-gray-600 mt-3 text-base lg:text-lg max-w-3xl">
-                    Manage your department's activities and staff performance in one centralized dashboard
+                    Manage your department's activities and staff performance in
+                    one centralized dashboard
                   </p>
                 </div>
-                
+
                 <div className="flex items-center justify-between lg:justify-end lg:ml-8">
                   <div className="text-right mr-4">
                     <p className="text-lg font-semibold text-gray-800">
                       {user?.first_name} {user?.last_name}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">{departmentName} Department</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {departmentName} Department
+                    </p>
                   </div>
                 </div>
               </div>
@@ -421,7 +442,9 @@ const HeadWelcomePage = () => {
                       <UserGroupIcon className="h-6 w-6 text-blue-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Total Staff
+                      </p>
                       <p className="text-2xl font-bold text-gray-900">
                         {departmentStats.totalStaff}
                       </p>
@@ -438,7 +461,9 @@ const HeadWelcomePage = () => {
                       <CheckCircleIcon className="h-6 w-6 text-green-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Completed</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Completed
+                      </p>
                       <p className="text-2xl font-bold text-gray-900">
                         {departmentStats.completedSubmissions}
                       </p>
@@ -453,11 +478,15 @@ const HeadWelcomePage = () => {
                       <ClockIcon className="h-6 w-6 text-yellow-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Pending</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Pending
+                      </p>
                       <p className="text-2xl font-bold text-gray-900">
                         {departmentStats.pendingSubmissions}
                       </p>
-                      <p className="text-xs text-orange-600 font-medium">Needs attention</p>
+                      <p className="text-xs text-orange-600 font-medium">
+                        Needs attention
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -468,11 +497,15 @@ const HeadWelcomePage = () => {
                       <ChartBarIcon className="h-6 w-6 text-purple-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Performance</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Performance
+                      </p>
                       <p className="text-2xl font-bold text-gray-900">
                         {departmentStats.performance}%
                       </p>
-                      <p className="text-xs text-green-600 font-medium">Completion rate</p>
+                      <p className="text-xs text-green-600 font-medium">
+                        Completion rate
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -483,11 +516,15 @@ const HeadWelcomePage = () => {
                       <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Overdue</p>
+                      <p className="text-sm font-medium text-gray-600">
+                        Overdue
+                      </p>
                       <p className="text-2xl font-bold text-gray-900">
                         {departmentStats.overdueCount}
                       </p>
-                      <p className="text-xs text-red-600 font-medium">Immediate action</p>
+                      <p className="text-xs text-red-600 font-medium">
+                        Immediate action
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -538,8 +575,12 @@ const HeadWelcomePage = () => {
                       ) : (
                         <div className="text-center py-8">
                           <DocumentTextIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-gray-500 text-lg">No recent activity</p>
-                          <p className="text-gray-400 text-sm mt-1">Activity will appear here as it happens</p>
+                          <p className="text-gray-500 text-lg">
+                            No recent activity
+                          </p>
+                          <p className="text-gray-400 text-sm mt-1">
+                            Activity will appear here as it happens
+                          </p>
                         </div>
                       )}
                     </div>
@@ -572,16 +613,20 @@ const HeadWelcomePage = () => {
                         upcomingDeadlines.map((deadline) => (
                           <div
                             key={deadline.id}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            onClick={() =>
+                              navigate(`/cardDetails/${deadline.id}`)
+                            }
+                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group" // Added cursor-pointer and group
                           >
                             <div className="flex items-center">
                               <ClockIcon className="h-5 w-5 text-gray-400 mr-4" />
                               <div>
-                                <p className="text-base font-medium text-gray-900">
+                                <p className="text-base font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
                                   {deadline.title}
                                 </p>
                                 <p className="text-sm text-gray-500">
-                                  Due: {deadline.deadline} • {deadline.assignedTo}
+                                  Due: {deadline.deadline} •{" "}
+                                  {deadline.assignedTo}
                                 </p>
                               </div>
                             </div>
@@ -597,8 +642,12 @@ const HeadWelcomePage = () => {
                       ) : (
                         <div className="text-center py-8">
                           <ClockIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-gray-500 text-lg">No upcoming deadlines</p>
-                          <p className="text-gray-400 text-sm mt-1">All caught up for now</p>
+                          <p className="text-gray-500 text-lg">
+                            No upcoming deadlines
+                          </p>
+                          <p className="text-gray-400 text-sm mt-1">
+                            All caught up for now
+                          </p>
                         </div>
                       )}
                     </div>
@@ -647,7 +696,7 @@ const HeadWelcomePage = () => {
                       Card Management
                     </span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => navigate("/reports/create")}
                     className="flex items-center p-4 border-2 border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 group"
                   >
@@ -703,19 +752,39 @@ const HeadWelcomePage = () => {
                 </h2>
                 <div className="space-y-4">
                   <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                    <h3 className="font-semibold text-gray-800">Quarterly Review Meeting</h3>
-                    <p className="text-sm text-gray-600 mt-1">Scheduled for next Friday at 2:00 PM in Conference Room A</p>
-                    <p className="text-xs text-gray-500 mt-2">Posted 2 days ago</p>
+                    <h3 className="font-semibold text-gray-800">
+                      Quarterly Review Meeting
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Scheduled for next Friday at 2:00 PM in Conference Room A
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Posted 2 days ago
+                    </p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
-                    <h3 className="font-semibold text-gray-800">New Submission Guidelines</h3>
-                    <p className="text-sm text-gray-600 mt-1">Updated submission guidelines have been published. Please review before your next submission.</p>
-                    <p className="text-xs text-gray-500 mt-2">Posted 1 week ago</p>
+                    <h3 className="font-semibold text-gray-800">
+                      New Submission Guidelines
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Updated submission guidelines have been published. Please
+                      review before your next submission.
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Posted 1 week ago
+                    </p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-orange-500">
-                    <h3 className="font-semibold text-gray-800">System Maintenance</h3>
-                    <p className="text-sm text-gray-600 mt-1">Scheduled maintenance this Saturday from 10 PM to 2 AM. System may be unavailable.</p>
-                    <p className="text-xs text-gray-500 mt-2">Posted 3 days ago</p>
+                    <h3 className="font-semibold text-gray-800">
+                      System Maintenance
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Scheduled maintenance this Saturday from 10 PM to 2 AM.
+                      System may be unavailable.
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Posted 3 days ago
+                    </p>
                   </div>
                 </div>
               </div>
