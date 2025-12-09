@@ -11,6 +11,7 @@ import {
   PlusCircleIcon,
   BuildingLibraryIcon,
   PaperAirplaneIcon,
+  BriefcaseIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
@@ -64,7 +65,6 @@ const StaffDashboard = () => {
     pendingSubmissions: 0,
     activeCards: 0,
   });
-  // Use the updated Submission interface
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [availableCards, setAvailableCards] = useState<Card[]>([]);
   const [pendingDeadlines, setPendingDeadlines] = useState<Card[]>([]);
@@ -77,7 +77,6 @@ const StaffDashboard = () => {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      // Fetch user's recent submissions using the 'recent=true' query
       const submissionsRes = await fetch(
         `${baseUrl}/submissions/my-submissions?recent=true`,
         {
@@ -88,8 +87,6 @@ const StaffDashboard = () => {
         }
       );
 
-      // Fetch available cards for user's department
-      // MODIFICATION: Using the specific /cards/department endpoint to retrieve all relevant cards
       const cardsRes = await fetch(`${baseUrl}/cards/department`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -99,31 +96,24 @@ const StaffDashboard = () => {
 
       if (submissionsRes.ok) {
         const submissionsData = await submissionsRes.json();
-        // Extract submissions array from the 'data' field
         const submissions = submissionsData.data || [];
 
-        // The backend now limits the result, so no need for slice(0, 5) here
         setRecentSubmissions(submissions);
-
-        // For stats calculation, we need all submissions, not just the recent ones.
-        // NOTE: If the backend query is only fetching the recent 5, this stat calculation will be inaccurate for Total/Approved/Pending.
-        // Assuming for the dashboard quick view, the stats should reflect the count of these 5 recent submissions.
-        // If full stats are needed, a separate, non-recent endpoint call is required.
         calculateStats(submissions);
+      } else {
+        toast.error("Failed to load recent submissions.");
       }
 
       if (cardsRes.ok) {
-        const cardsData = await cardsRes.json();
+        const cardsData: Card[] = await cardsRes.json();
         setAvailableCards(cardsData);
 
-        // Filter for upcoming deadlines (cards with deadlines) - UPDATED LOGIC
         const cardsWithDeadlines = cardsData.filter(
           (card: Card) => card.deadline || card.expiresAt
         );
         
         const upcomingDeadlines = cardsWithDeadlines
           .filter((card: Card) => {
-            // Use the correct property (deadline OR expiresAt)
             const deadlineStr = card.deadline || card.expiresAt;
             if (!deadlineStr) return false;
             
@@ -132,7 +122,6 @@ const StaffDashboard = () => {
             const thirtyDaysFromNow = new Date(today);
             thirtyDaysFromNow.setDate(today.getDate() + 30);
             
-            // Check if deadline is in the future and within 30 days
             return deadlineDate >= today && deadlineDate <= thirtyDaysFromNow;
           })
           .sort((a: Card, b: Card) => {
@@ -142,9 +131,7 @@ const StaffDashboard = () => {
           })
           .slice(0, 5);
 
-        // Fallback: Show recently created cards if no deadlines
         if (upcomingDeadlines.length === 0 && cardsData.length > 0) {
-          // Show 5 most recently created active cards
           const recentActiveCards = cardsData
             .filter((card: Card) => card.is_active)
             .sort((a: Card, b: Card) => 
@@ -157,16 +144,12 @@ const StaffDashboard = () => {
           setPendingDeadlines(upcomingDeadlines);
         }
 
-        // Update activeCards stat based on newly fetched cards
         setStats((prevStats) => ({
           ...prevStats,
           activeCards: cardsData.length,
         }));
-        
-        // DEBUG: Log cards data to console
-        console.log('Available cards:', cardsData);
-        console.log('Cards with deadlines:', cardsData.filter((card: Card) => card.deadline || card.expiresAt));
-        console.log('Upcoming deadlines count:', upcomingDeadlines.length);
+      } else {
+        toast.error("Failed to load available cards.");
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -176,10 +159,8 @@ const StaffDashboard = () => {
     }
   };
 
-  // Ensure calculateStats handles the new Submission interface (uppercase status)
   const calculateStats = (submissions: Submission[]) => {
     const totalSubmissions = submissions.length;
-    // Matching backend's uppercase status strings
     const approvedSubmissions = submissions.filter(
       (s) => s.status === "APPROVED"
     ).length;
@@ -219,11 +200,14 @@ const StaffDashboard = () => {
     });
   };
 
-  // Helper function to calculate days until deadline
   const getDaysUntilDeadline = (deadlineStr?: string) => {
     if (!deadlineStr) return null;
     const deadlineDate = new Date(deadlineStr);
     const today = new Date();
+    // Set time of both dates to 00:00:00 for accurate day counting
+    deadlineDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
     const timeDiff = deadlineDate.getTime() - today.getTime();
     return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
   };
@@ -237,173 +221,221 @@ const StaffDashboard = () => {
   }
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
-      <div className="max-w-full mx-auto">
-        {/* Top Section - Header & Stats in one row */}
-        <div className="flex flex-col lg:flex-row gap-6 mb-6">
-          {/* Header - Left side */}
-          <div className="lg:w-1/3">
-            <div className="flex items-center gap-3 mb-2">
-              <BuildingLibraryIcon className="h-8 w-8 text-orange-600" />
-              <h1 className="text-3xl font-bold text-gray-800">
-                Staff Dashboard
-              </h1>
-            </div>
-            <p className="text-gray-600">
-              Welcome back,{" "}
-              <span className="font-semibold text-orange-600">
-                {user?.first_name || user?.username}
-              </span>
-              !{user?.department && ` | Department: ${user.department.name}`}
-            </p>
+    // FULL WIDTH CONTAINER
+    <div className="p-6 bg-gray-50 min-h-screen"> 
+      
+      {/* Top Section - Header & Stats in one row */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <BuildingLibraryIcon className="h-8 w-8 text-orange-600" />
+            <h1 className="text-3xl font-bold text-gray-800">
+              Staff Dashboard
+            </h1>
           </div>
+          <p className="text-gray-600 text-lg">
+            Welcome back,{" "}
+            <span className="font-semibold text-orange-600">
+              {user?.first_name || user?.username}
+            </span>
+            {user?.department && (
+              <span className="ml-3 inline-flex items-center text-sm text-gray-500">
+                <BriefcaseIcon className="h-4 w-4 mr-1" />
+                {user.department.name}
+              </span>
+            )}
+          </p>
+        </div>
 
-          {/* Stats Cards - Right side, in a row */}
-          <div className="lg:w-2/3">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg shadow p-4 border border-gray-200 hover:shadow-md transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <PaperAirplaneIcon className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">
-                      Submissions
-                    </p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {stats.totalSubmissions}
-                    </p>
-                  </div>
-                </div>
-              </div>
+        {/* Stats Cards - Now full width, optimized grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+          <StatCard
+            title="Total Submissions"
+            value={stats.totalSubmissions}
+            icon={PaperAirplaneIcon}
+            color="blue"
+          />
+          <StatCard
+            title="Approved"
+            value={stats.approvedSubmissions}
+            icon={CheckCircleIcon}
+            color="green"
+          />
+          <StatCard
+            title="Pending Review"
+            value={stats.pendingSubmissions}
+            icon={ClockIcon}
+            color="yellow"
+          />
+          <StatCard
+            title="Active Cards"
+            value={stats.activeCards}
+            icon={FolderIcon}
+            color="orange"
+          />
+           <StatCard 
+            title="Drafts/New"
+            value={availableCards.length - recentSubmissions.length} 
+            icon={PlusCircleIcon}
+            color="purple"
+          />
+           <StatCard 
+            title="Quick Action"
+            value="Submit Now"
+            icon={ArrowUpTrayIcon}
+            color="red"
+            onClick={() => navigate("/cards")}
+          />
+        </div>
+      </div>
 
-              <div className="bg-white rounded-lg shadow p-4 border border-gray-200 hover:shadow-md transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Approved</p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {stats.approvedSubmissions}
-                    </p>
-                  </div>
+      {/* Main Content - Full-Width Columns (Ratio 5:4:3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Available Cards - Left/Middle Section (5/12 width) */}
+        <div className="lg:col-span-5">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 h-full flex flex-col">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <FolderIcon className="h-5 w-5 text-orange-600 mr-2" />
+                Available Cards
+              </h2>
+              <button
+                onClick={() => navigate("/cards")}
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+              >
+                Browse All
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {availableCards.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {availableCards.map((card) => (
+                    <div
+                      key={card.id}
+                      className="border border-gray-100 bg-gray-50 rounded-lg p-3 hover:border-orange-400 hover:bg-orange-50 transition-all duration-200 cursor-pointer"
+                      onClick={() => navigate(`/cardDetails/${card.id}`)} 
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <h3 className="font-bold text-gray-900 text-sm truncate pr-2">
+                          {card.name}
+                        </h3>
+                        {card.priority && (
+                          <span
+                            className={`px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 ${getPriorityColor(
+                              card.priority
+                            )}`}
+                          >
+                            {card.priority}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                        {card.title || card.description || "No description available"}
+                      </p>
+                      <div className="flex justify-between items-center mt-1">
+                        {(card.deadline || card.expiresAt) && (
+                          <p className="text-xs text-gray-500">
+                            Deadline: {formatDate(card.deadline || card.expiresAt!)}
+                          </p>
+                        )}
+                        {/* <ArrowUpTrayIcon className="h-4 w-4 text-orange-400" /> */}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow p-4 border border-gray-200 hover:shadow-md transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <ClockIcon className="h-5 w-5 text-yellow-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">
-                      Pending
-                    </p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {stats.pendingSubmissions}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow p-4 border border-gray-200 hover:shadow-md transition-shadow">
-                <div className="flex items-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <FolderIcon className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">
-                      Active Cards
-                    </p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {stats.activeCards}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              ) : (
+                <EmptyState icon={FolderIcon} message="No Submission Cards available for your department." actionText="Create a new card" actionClick={() => navigate("/cards/new")} />
+              )}
             </div>
           </div>
         </div>
 
-        {/* Main Content - All sections side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[calc(100vh-250px)]">
-          {/* Recent Submissions - Left Column */}
-          <div className="lg:col-span-4 h-full">
-            <div className="bg-white rounded-lg shadow border border-gray-200 h-full flex flex-col">
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Recent Submissions
-                </h2>
-                <button
-                  onClick={() => navigate("/my-submissions")}
-                  className="text-sm text-orange-600 hover:text-orange-700 font-medium"
-                >
-                  View All
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                {recentSubmissions.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentSubmissions.slice(0, 10).map((submission) => (
-                      <div
-                        key={submission.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center">
-                          <DocumentTextIcon className="h-4 w-4 text-gray-400 mr-2" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-gray-900 text-sm truncate">
-                              {submission.title}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {submission.cardType.name} • {formatDate(submission.submission_date)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 h-full flex flex-col items-center justify-center">
-                    <PaperAirplaneIcon className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">No submissions yet</p>
-                    <button
-                      onClick={() => navigate("/cards")}
-                      className="mt-2 text-orange-600 hover:text-orange-700 text-xs font-medium"
+        {/* Recent Submissions - Center Section (4/12 width) */}
+        {/* Recent Submissions - Center Section (4/12 width) */}
+        <div className="lg:col-span-4">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 h-full flex flex-col">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <PaperAirplaneIcon className="h-5 w-5 text-blue-600 mr-2" />
+                Your Recent Submissions
+              </h2>
+              <button
+                onClick={() => navigate("/my-submissions")}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                View Status
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {recentSubmissions.length > 0 ? (
+                <div className="space-y-3">
+                  {recentSubmissions.slice(0, 10).map((submission) => (
+                    <div
+                      key={submission.id}
+                      // Removed: onClick={() => navigate(`/submissions/${submission.id}`)}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-default border border-gray-100" // Changed cursor-pointer to cursor-default
                     >
-                      Browse cards to submit
-                    </button>
-                  </div>
-                )}
-              </div>
+                      <div className="min-w-0 pr-3">
+                        <p className="font-semibold text-gray-900 text-sm truncate">
+                          {submission.title}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                          {submission.cardType.name} • Submitted: {formatDate(submission.submission_date)}
+                        </p>
+                      </div>
+                      <SubmissionStatusTag status={submission.status} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState icon={DocumentTextIcon} message="You haven't made any recent submissions." actionText="Browse Cards" actionClick={() => navigate("/cards")} />
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Available Cards - Middle Column */}
-          <div className="lg:col-span-5 h-full">
-            <div className="bg-white rounded-lg shadow border border-gray-200 h-full flex flex-col">
-              <div className="p-4 border-b border-gray-200 flex-shrink-0">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Available Cards
-                </h2>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                {availableCards.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {availableCards.map((card) => (
+        {/* Right Column - Deadlines & Quick Actions (3/12 width) */}
+        <div className="lg:col-span-3 h-full flex flex-col gap-6">
+          
+          {/* Card Deadlines */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex-1 flex flex-col min-h-64">
+            <div className="p-4 border-b border-gray-100 flex-shrink-0">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <ClockIcon className="h-5 w-5 text-yellow-600 mr-2" />
+                Upcoming Deadlines
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {pendingDeadlines.length > 0 ? (
+                <div className="space-y-3">
+                  {pendingDeadlines.map((card) => {
+                    const deadlineStr = card.deadline || card.expiresAt;
+                    const daysUntil = getDaysUntilDeadline(deadlineStr);
+                    
+                    const isUrgent = daysUntil !== null && daysUntil <= 7 && daysUntil >= 0;
+                    const isOverdue = daysUntil !== null && daysUntil < 0;
+
+                    const deadlineClass = isOverdue 
+                        ? "text-red-600 font-bold" 
+                        : isUrgent 
+                        ? "text-orange-600 font-bold" 
+                        : "text-gray-700";
+
+                    return (
                       <div
                         key={card.id}
-                        className="border border-gray-200 rounded-lg p-3 hover:border-orange-300 transition-colors cursor-pointer"
-                        onClick={() => navigate("/cards")}
+                        className="p-3 bg-gray-50 rounded-lg hover:bg-yellow-50 transition-colors cursor-pointer border border-gray-100"
+                        onClick={() => navigate(`/cardDetails/${card.id}`)}
+
                       >
                         <div className="flex justify-between items-start mb-1">
-                          <h3 className="font-medium text-gray-900 text-sm">
+                          <p className="font-medium text-gray-900 text-sm truncate">
                             {card.name}
-                          </h3>
-                          {card.priority && (
+                          </p>
+                           {card.priority && (
                             <span
-                              className={`px-2 py-0.5 text-xs font-medium rounded-full ${getPriorityColor(
+                              className={`px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${getPriorityColor(
                                 card.priority
                               )}`}
                             >
@@ -411,195 +443,59 @@ const StaffDashboard = () => {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                          {card.title || "No Title available"}
-                        </p>
                         <div className="flex justify-between items-center">
-                          {(card.deadline || card.expiresAt) && (
-                            <p className="text-xs text-gray-500">
-                              Due: {formatDate(card.deadline || card.expiresAt!)}
-                            </p>
+                          <p className={`text-xs ${deadlineClass}`}>
+                            {isOverdue ? "OVERDUE" : "Due"}: {formatDate(deadlineStr!)}
+                          </p>
+                          {daysUntil !== null && daysUntil >= 0 && (
+                            <span className={`text-xs font-semibold ${isUrgent ? 'text-red-500' : 'text-gray-500'}`}>
+                              {daysUntil} Days Left
+                            </span>
                           )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 h-full flex flex-col items-center justify-center">
-                    <FolderIcon className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">
-                      No cards available
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Check back later
-                    </p>
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState icon={ClockIcon} message="No urgent deadlines found." actionText="Review all active cards" actionClick={() => navigate("/cards")} />
+              )}
             </div>
           </div>
 
-          {/* Right Column - Card Deadlines & Quick Actions */}
-          <div className="lg:col-span-3 h-full flex flex-col gap-6">
-            {/* Card Deadlines */}
-            <div className="bg-white rounded-lg shadow border border-gray-200 flex-1 flex flex-col">
-              <div className="p-4 border-b border-gray-200 flex-shrink-0">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Card Deadlines
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  {pendingDeadlines.length} upcoming
-                </p>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                {pendingDeadlines.length > 0 ? (
-                  <div className="space-y-3">
-                    {pendingDeadlines.map((card) => {
-                      const deadlineStr = card.deadline || card.expiresAt;
-                      const daysUntil = getDaysUntilDeadline(deadlineStr);
-                      
-                      return (
-                        <div
-                          key={card.id}
-                          className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                          onClick={() => navigate(`/cards/${card.id}`)}
-                        >
-                          <div className="flex items-center mb-1">
-                            <ClockIcon className="h-4 w-4 text-gray-400 mr-2" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 text-sm truncate">
-                                {card.name}
-                              </p>
-                              {card.department && (
-                                <p className="text-xs text-gray-500 truncate">
-                                  {card.department.name}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <div className="min-w-0">
-                              {deadlineStr ? (
-                                <p className="text-xs text-gray-700 truncate">
-                                  Due: {formatDate(deadlineStr)}
-                                  {daysUntil !== null && daysUntil > 0 && (
-                                    <span className="text-gray-500 ml-1">
-                                      ({daysUntil}d)
-                                    </span>
-                                  )}
-                                </p>
-                              ) : (
-                                <p className="text-xs text-gray-500">No deadline</p>
-                              )}
-                            </div>
-                            <span
-                              className={`px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${getPriorityColor(
-                                card.priority
-                              )}`}
-                            >
-                              {card.priority || "None"}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 h-full flex items-center justify-center">
-                    <ClockIcon className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                    <div>
-                      <p className="text-gray-500 text-sm">No deadlines</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {availableCards.length > 0 
-                          ? "Cards with deadlines appear here" 
-                          : "No cards available"}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex-shrink-0">
+            <div className="p-4 border-b border-gray-100">
+              <h2 className="text-xl font-semibold text-gray-800">
+                Quick Actions
+              </h2>
             </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow border border-gray-200">
-              <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Quick Actions
-                </h2>
-              </div>
-              <div className="p-4">
-                <div className="space-y-2">
-                  <button
-                    onClick={() => navigate("/cards")}
-                    className="w-full flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <FolderIcon className="h-4 w-4 text-orange-600 mr-2" />
-                    <span className="font-medium text-gray-900 text-sm">
-                      Browse All Cards
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => navigate("/my-submissions")}
-                    className="w-full flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <DocumentTextIcon className="h-4 w-4 text-blue-600 mr-2" />
-                    <span className="font-medium text-gray-900 text-sm">
-                      My Submissions
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => navigate("/submit/new")}
-                    className="w-full flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <PlusCircleIcon className="h-4 w-4 text-green-600 mr-2" />
-                    <span className="font-medium text-gray-900 text-sm">
-                      New Submission
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => navigate("/profile")}
-                    className="w-full flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <UserGroupIcon className="h-4 w-4 text-purple-600 mr-2" />
-                    <span className="font-medium text-gray-900 text-sm">
-                      My Profile
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity - Bottom bar */}
-        <div className="mt-6 bg-white rounded-lg shadow border border-gray-200">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Recent Activity Summary
-            </h2>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-xl font-bold text-orange-600">
-                  {stats.totalSubmissions}
-                </div>
-                <p className="text-sm text-gray-600">Total Submissions</p>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-green-600">
-                  {stats.approvedSubmissions}
-                </div>
-                <p className="text-sm text-gray-600">Approved</p>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-yellow-600">
-                  {stats.pendingSubmissions}
-                </div>
-                <p className="text-sm text-gray-600">Pending Review</p>
+            <div className="p-4">
+              <div className="space-y-3">
+                <ActionButton 
+                  icon={FolderIcon} 
+                  label="Browse All Cards" 
+                  color="orange" 
+                  onClick={() => navigate("/cards")}
+                />
+                <ActionButton 
+                  icon={DocumentTextIcon} 
+                  label="My Submissions" 
+                  color="blue" 
+                  onClick={() => navigate("/my-submissions")}
+                />
+                <ActionButton 
+                  icon={PlusCircleIcon} 
+                  label="New Submission" 
+                  color="green" 
+                  onClick={() => navigate("/submit/new")}
+                />
+                <ActionButton 
+                  icon={UserGroupIcon} 
+                  label="My Profile & Settings" 
+                  color="purple" 
+                  onClick={() => navigate("/profile")}
+                />
               </div>
             </div>
           </div>
@@ -610,3 +506,117 @@ const StaffDashboard = () => {
 };
 
 export default StaffDashboard;
+
+
+// --- Helper Components for Cleanliness ---
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: "blue" | "green" | "yellow" | "orange" | "purple" | "red";
+  onClick?: () => void;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, onClick }) => {
+  const colorMap = {
+    blue: "text-blue-600 bg-blue-100",
+    green: "text-green-600 bg-green-100",
+    yellow: "text-yellow-600 bg-yellow-100",
+    orange: "text-orange-600 bg-orange-100",
+    purple: "text-purple-600 bg-purple-100",
+    red: "text-red-600 bg-red-100",
+  };
+  const hoverClass = onClick ? "hover:shadow-xl hover:scale-[1.02] cursor-pointer" : "";
+
+  return (
+    <div 
+        className={`bg-white rounded-xl shadow p-4 border border-gray-200 transition-all duration-300 ${hoverClass}`}
+        onClick={onClick}
+    >
+      <div className="flex items-center">
+        <div className={`p-2 rounded-xl ${colorMap[color]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="ml-3 min-w-0">
+          <p className="text-sm font-medium text-gray-600 truncate">{title}</p>
+          <p className="text-xl font-bold text-gray-900">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ActionButtonProps {
+  icon: React.ElementType;
+  label: string;
+  color: "blue" | "green" | "yellow" | "orange" | "purple" | "red";
+  onClick: () => void;
+}
+
+const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, label, color, onClick }) => {
+  const colorMap = {
+    blue: "text-blue-600 border-blue-200 hover:bg-blue-50",
+    green: "text-green-600 border-green-200 hover:bg-green-50",
+    yellow: "text-yellow-600 border-yellow-200 hover:bg-yellow-50",
+    orange: "text-orange-600 border-orange-200 hover:bg-orange-50",
+    purple: "text-purple-600 border-purple-200 hover:bg-purple-50",
+    red: "text-red-600 border-red-200 hover:bg-red-50",
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center p-3 border rounded-xl transition-all duration-200 shadow-sm ${colorMap[color]}`}
+    >
+      <Icon className={`h-5 w-5 mr-3 flex-shrink-0`} />
+      <span className="font-semibold text-gray-800 text-sm text-left flex-1">{label}</span>
+      <span className="text-gray-400 text-lg">→</span>
+    </button>
+  );
+};
+
+interface EmptyStateProps {
+  icon: React.ElementType;
+  message: string;
+  actionText: string;
+  actionClick: () => void;
+}
+
+const EmptyState: React.FC<EmptyStateProps> = ({ icon: Icon, message, actionText, actionClick }) => (
+  <div className="text-center py-10 h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+    <Icon className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+    <p className="text-gray-600 text-sm font-medium">{message}</p>
+    <button
+      onClick={actionClick}
+      className="mt-3 text-sm font-medium text-orange-600 hover:text-orange-700"
+    >
+      {actionText}
+    </button>
+  </div>
+);
+
+interface SubmissionStatusTagProps {
+  status: Submission['status'];
+}
+
+const SubmissionStatusTag: React.FC<SubmissionStatusTagProps> = ({ status }) => {
+    const statusMap = {
+        PENDING: { color: "yellow", icon: ClockIcon },
+        UNDER_REVIEW: { color: "blue", icon: ExclamationTriangleIcon },
+        APPROVED: { color: "green", icon: CheckCircleIcon },
+        REJECTED: { color: "red", icon: ExclamationTriangleIcon },
+    };
+
+    const { color, icon: Icon } = statusMap[status] || statusMap.PENDING;
+    const colorClass = `text-${color}-600 bg-${color}-100`;
+
+    return (
+        <span 
+            className={`px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 inline-flex items-center ${colorClass}`}
+        >
+            <Icon className="h-3 w-3 mr-1" />
+            {status.replace('_', ' ')}
+        </span>
+    );
+};
